@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * ================================
+ * ENUMS
+ * =================================
+ */
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum RecitationMode {
+  MUROJAAH
+  HAFALAN
+}
+
+enum RecitationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/**
+ * ================================
+ * USER MODELS
+ * =================================
+ */
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  username     String  @unique
+  fullName     String?
+  passwordHash String?
+  avatarUrl    String?
+  role         Role    @default(USER)
+
+  profile          UserProfile?
+  recitations      Recitation[]       @relation("user_recitations")
+  userAchievements UserAchievement[]
+  memorization     UserMemorization[]
+  leaderboards     Leaderboard[]
+
+  // aggregated stats for quick queries
+  totalSessions Int   @default(0)
+  totalScore    Float @default(0)
+  streakDays    Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model UserProfile {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
+  preferredLang String   @default("id")
+  theme         String   @default("light") // light | dark
+  bio           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/**
+ * ================================
+ * CORE FEATURE: RECITATION
+ * =================================
+ */
+
+model Recitation {
+  id        String           @id @default(cuid())
+  user      User             @relation("user_recitations", fields: [userId], references: [id])
+  userId    String
+  surah     Int
+  startAyah Int
+  endAyah   Int
+  mode      RecitationMode
+  status    RecitationStatus @default(PENDING)
+  duration  Int?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  feedback Feedback?
+}
+
+model Feedback {
+  id               String     @id @default(cuid())
+  recitationId     String     @unique
+  recitation       Recitation @relation(fields: [recitationId], references: [id])
+  transcription    String?
+  memorizationErrs Json?
+  tajweedErrs      Json?
+  waqfErrs         Json?
+  generalAdvice    String?
+  accuracyScore    Float
+  tajweedScore     Float
+  fluencyScore     Float
+  metadataQuran    Json? // metadata_quran
+  createdAt        DateTime   @default(now())
+}
+
+model UserMemorization {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  juzNumber  Int
+  surahStart Int
+  surahEnd   Int
+  ayahStart  Int
+  ayahEnd    Int
+  verified   Boolean  @default(false)
+  completion Float    @default(0) // 0–100%
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, juzNumber])
+  @@index([userId])
+}
+
+/**
+ * ================================
+ * LEADERBOARD (PERFORMANCE SNAPSHOT)
+ * =================================
+ */
+
+model Leaderboard {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period    String // e.g. "2025-10-06", "2025-W40", or "global"
+  score     Float
+  rank      Int?
+  category  String? // e.g., "weekly", "overall", "juz-1"
+  createdAt DateTime @default(now())
+
+  @@unique([userId, period, category])
+  @@index([period, score])
+  @@index([userId, period])
+}
+
+/**
+ * ================================
+ * ACHIEVEMENTS (GAMIFICATION)
+ * =================================
+ */
+
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g., "streak_7", "first_100_ayats"
+  title       String
+  description String?
+  iconUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}

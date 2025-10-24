@@ -1,0 +1,11 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+
+[*.jsx]
+indent_size = 4
+
+[*.tsx]
+indent_size = 4
