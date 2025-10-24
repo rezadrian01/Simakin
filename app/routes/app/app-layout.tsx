@@ -1,10 +1,17 @@
-import { Outlet } from "react-router";
+import { Outlet, redirect } from "react-router";
 import { AppSidebar } from "~/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
+import type { Route } from "../+types/home";
+
+export async function loader({ request }: Route.LoaderArgs) {
+    const { requireUserId } = await import("~/services/auth/auth.server");
+    const userId = await requireUserId(request);
+    console.log({ userId });
+    return {};
+}
 
 export default function AppLayout() {
     return <>
-
         <SidebarProvider>
             <AppSidebar />
             <main className="w-full">
