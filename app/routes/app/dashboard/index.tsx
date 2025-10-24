@@ -7,7 +7,6 @@ import { getIndonesianGreeting } from '~/utils/indonesian-utils'
 import RecentSessionsCard from './components/recent-sessions-card'
 import StatsOverview from './components/stats-overview'
 import TodaysProgress from './components/todays-progress'
-import { db } from '~/lib/db.server'
 import type { Route } from './+types/index'
 
 // Loader function to fetch data from database
@@ -15,130 +14,67 @@ export async function loader({ request }: Route.LoaderArgs) {
     // TODO: Get userId from session/auth
     const userId = "temp-user-id" // Replace with actual auth
 
-    // Get or create user
-    let user = await db.user.findUnique({
-        where: { id: userId },
-        include: {
-            memorization: true,
-            leaderboards: {
-                where: { period: 'global' },
-                orderBy: { rank: 'asc' },
-                take: 1
-            }
-        }
-    })
-
-    // Create user if not exists (for testing)
-    if (!user) {
-        user = await db.user.create({
-            data: {
-                id: userId,
-                email: 'test@example.com',
-                username: 'testuser',
-                fullName: 'Test User',
-                streakDays: 7,
-                totalSessions: 15,
-                totalScore: 1250
-            },
-            include: {
-                memorization: true,
-                leaderboards: {
-                    where: { period: 'global' },
-                    orderBy: { rank: 'asc' },
-                    take: 1
-                }
-            }
-        })
-    }
-
-    // Get recent recitations with feedback
-    const recentRecitations = await db.recitation.findMany({
-        where: {
-            userId,
-            status: 'COMPLETED'
-        },
-        include: {
-            feedback: true
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5
-    })
-
-    // Calculate today's sessions
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const todaySessions = await db.recitation.count({
-        where: {
-            userId,
-            status: 'COMPLETED',
-            createdAt: { gte: today }
-        }
-    })
-
-    // Calculate weekly progress
-    const weekStart = new Date()
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-    weekStart.setHours(0, 0, 0, 0)
-
-    const weeklyProgress = await db.recitation.count({
-        where: {
-            userId,
-            status: 'COMPLETED',
-            createdAt: { gte: weekStart }
-        }
-    })
-
-    // Calculate average scores
-    const feedbacks = await db.feedback.findMany({
-        where: {
-            recitation: { userId }
-        },
-        select: {
-            accuracyScore: true,
-            tajweedScore: true
-        }
-    })
-
-    const avgAccuracy = feedbacks.length > 0
-        ? Math.round(feedbacks.reduce((sum, f) => sum + f.accuracyScore, 0) / feedbacks.length)
-        : 0
-
-    const avgTajweed = feedbacks.length > 0
-        ? Math.round(feedbacks.reduce((sum, f) => sum + f.tajweedScore, 0) / feedbacks.length)
-        : 0
-
-    // Get surah names mapping (simplified - you can expand this)
-    const surahNames: { [key: number]: string } = {
-        1: "Al-Fatihah",
-        2: "Al-Baqarah",
-        112: "Al-Ikhlas",
-        113: "Al-Falaq",
-        114: "An-Nas"
-    }
-
+    // DUMMY DATA - Replace with actual database queries
     return {
         userStats: {
-            totalSurahMemorized: user.memorization.length,
-            totalJuzMemorized: Math.floor(user.memorization.length / 10), // Rough estimate
-            recitationAccuracy: avgAccuracy,
-            tajweedScore: avgTajweed,
-            totalEXP: Math.round(user.totalScore),
-            currentStreak: user.streakDays,
-            todaysSessions: todaySessions,
+            totalSurahMemorized: 12,
+            totalJuzMemorized: 2,
+            recitationAccuracy: 87,
+            tajweedScore: 92,
+            totalEXP: 1450,
+            currentStreak: 7,
+            todaysSessions: 2,
             weeklyGoal: 10,
-            weeklyProgress: weeklyProgress,
-            userRank: user.leaderboards[0]?.rank || 0
+            weeklyProgress: 6,
+            userRank: 15
         },
-        recentSessions: recentRecitations.map((recitation, index) => ({
-            id: index + 1,
-            surah: surahNames[recitation.surah] || `Surah ${recitation.surah}`,
-            accuracy: Math.round(recitation.feedback?.accuracyScore || 0),
-            tajweed: Math.round(recitation.feedback?.tajweedScore || 0),
-            date: recitation.createdAt.toISOString(),
-            exp: Math.round((recitation.feedback?.accuracyScore || 0) / 2),
-            sessionType: recitation.mode.toLowerCase()
-        })),
+        recentSessions: [
+            {
+                id: 1,
+                surah: "Al-Fatihah",
+                accuracy: 95,
+                tajweed: 90,
+                date: new Date().toISOString(),
+                exp: 50,
+                sessionType: "hafalan"
+            },
+            {
+                id: 2,
+                surah: "Al-Ikhlas",
+                accuracy: 88,
+                tajweed: 92,
+                date: new Date(Date.now() - 86400000).toISOString(),
+                exp: 45,
+                sessionType: "murojaah"
+            },
+            {
+                id: 3,
+                surah: "Al-Falaq",
+                accuracy: 82,
+                tajweed: 85,
+                date: new Date(Date.now() - 172800000).toISOString(),
+                exp: 40,
+                sessionType: "hafalan"
+            },
+            {
+                id: 4,
+                surah: "An-Nas",
+                accuracy: 90,
+                tajweed: 88,
+                date: new Date(Date.now() - 259200000).toISOString(),
+                exp: 48,
+                sessionType: "murojaah"
+            },
+            {
+                id: 5,
+                surah: "Al-Baqarah",
+                accuracy: 78,
+                tajweed: 80,
+                date: new Date(Date.now() - 345600000).toISOString(),
+                exp: 38,
+                sessionType: "hafalan"
+            }
+        ],
         quickActions: [
             {
                 title: "Hafalan Baru",
