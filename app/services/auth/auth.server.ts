@@ -26,6 +26,55 @@ export const sessionStorage = createCookieSessionStorage({
   },
 });
 
+// Valid app routes that users can be redirected to
+const VALID_APP_ROUTES = [
+  "/app/dashboard",
+  "/app/game",
+  "/app/leaderboard",
+  "/app/memorization",
+  "/app/progress-report",
+];
+
+// Helper to validate and get safe redirect URL
+export function getSafeRedirectUrl(
+  request: Request,
+  fallbackPath: string = "/app/dashboard"
+): string {
+  const url = new URL(request.url);
+  const redirectTo = url.searchParams.get("redirectTo");
+
+  // If no redirectTo param, use fallback
+  if (!redirectTo) {
+    return `${url.origin}${fallbackPath}`;
+  }
+
+  try {
+    // Try to parse as full URL
+    const redirectUrl = new URL(redirectTo);
+
+    // Only allow same origin redirects for security
+    if (redirectUrl.origin !== url.origin) {
+      return `${url.origin}${fallbackPath}`;
+    }
+
+    // Check if the path is in valid routes
+    if (VALID_APP_ROUTES.includes(redirectUrl.pathname)) {
+      return redirectUrl.href;
+    }
+
+    // If path not in valid routes, use fallback
+    return `${url.origin}${fallbackPath}`;
+  } catch {
+    // If redirectTo is not a full URL, treat it as pathname
+    if (VALID_APP_ROUTES.includes(redirectTo)) {
+      return `${url.origin}${redirectTo}`;
+    }
+
+    // Invalid path, use fallback
+    return `${url.origin}${fallbackPath}`;
+  }
+}
+
 // Session helpers
 export async function createUserSession(userId: string, redirectTo: string) {
   const session = await sessionStorage.getSession();
@@ -53,7 +102,9 @@ export async function requireUserId(
 ) {
   const userId = await getUserId(request);
   if (!userId) {
-    const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
+    const url = new URL(request.url);
+    const fullRedirectUrl = `${url.origin}${redirectTo}`;
+    const searchParams = new URLSearchParams([["redirectTo", fullRedirectUrl]]);
     throw redirect(`/auth/signin?${searchParams}`);
   }
   return userId;
@@ -142,7 +193,7 @@ export async function signin({
 }
 
 // Google OAuth helpers
-export async function getGoogleAuthUrl(redirectUri: string) {
+export async function getGoogleAuthUrl(redirectUri: string, state?: string) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   if (!googleClientId) {
     throw new Error("GOOGLE_CLIENT_ID is not configured");
@@ -156,6 +207,11 @@ export async function getGoogleAuthUrl(redirectUri: string) {
     access_type: "offline",
     prompt: "consent",
   });
+
+  // Add state parameter if provided
+  if (state) {
+    params.set("state", state);
+  }
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

@@ -6,7 +6,7 @@ import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { AlertCircle, Book, Loader2, Eye, EyeOff } from "lucide-react";
 import type { Route } from "./+types";
-import { createUserSession, getUserId, signin, getGoogleAuthUrl } from "~/services/auth/auth.server";
+import { createUserSession, getUserId, signin, getGoogleAuthUrl, getSafeRedirectUrl } from "~/services/auth/auth.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
     const userId = await getUserId(request);
@@ -29,23 +29,28 @@ export async function action({ request }: Route.ActionArgs) {
     const formData = await request.formData();
     const intent = formData.get("intent");
 
+    // Get safe redirect URL from query params
+    const safeRedirectUrl = getSafeRedirectUrl(request);
+
     // Handle Google OAuth
     if (intent === "google") {
         const url = new URL(request.url);
         const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${url.origin}/auth/google/callback`;
-        const googleAuthUrl = await getGoogleAuthUrl(redirectUri);
-        return redirect(googleAuthUrl);
-    }
 
-    // Handle regular signin
+        // Get redirectTo from query params
+        const redirectTo = url.searchParams.get("redirectTo");
+
+        // Pass redirectTo via Google OAuth state parameter
+        const googleAuthUrl = await getGoogleAuthUrl(redirectUri, redirectTo || undefined);
+
+        return redirect(googleAuthUrl);
+    }    // Handle regular signin
     const emailOrUsername = formData.get("emailOrUsername");
     const password = formData.get("password");
-    const redirectTo = formData.get("redirectTo") || "/app/dashboard";
 
     if (
         typeof emailOrUsername !== "string" ||
-        typeof password !== "string" ||
-        typeof redirectTo !== "string"
+        typeof password !== "string"
     ) {
         return { error: "Form submitted incorrectly" };
     }
@@ -60,7 +65,7 @@ export async function action({ request }: Route.ActionArgs) {
         return { error: "Invalid email or password" };
     }
 
-    return createUserSession(user.id, redirectTo);
+    return createUserSession(user.id, safeRedirectUrl);
 }
 
 export default function SigninPage({ loaderData, actionData }: Route.ComponentProps) {

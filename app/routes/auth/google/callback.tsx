@@ -13,6 +13,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const error = url.searchParams.get("error");
     const state = url.searchParams.get("state"); // Get state parameter from Google
 
+    console.log("Google OAuth Callback - Query Params:", {
+        code: code ? "exists" : "missing",
+        error,
+        state,
+        fullUrl: url.href,
+    });
+
     if (error) {
         // User cancelled or error occurred
         return new Response(null, {
@@ -57,6 +64,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         let redirectUrl: string;
 
         if (state) {
+            console.log("State parameter found:", state);
             // State was passed from signin/signup page
             // Create a temporary request with the state as redirectTo
             const tempUrl = new URL(request.url);
@@ -64,11 +72,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
             const tempRequest = new Request(tempUrl.toString());
             redirectUrl = getSafeRedirectUrl(tempRequest);
         } else {
+            console.log("No state parameter, using default redirect");
             // Use the redirectTo from query params or default
             redirectUrl = getSafeRedirectUrl(request);
         }
 
+        console.log("Final redirect URL:", redirectUrl);
+
         // Create session and redirect to intended URL
+        // Important: We pass the full URL directly to createUserSession
+        // The redirect happens immediately, no need for auth-layout to handle it
         return createUserSession(user.id, redirectUrl);
     } catch (error) {
         console.error("Google OAuth error:", error);

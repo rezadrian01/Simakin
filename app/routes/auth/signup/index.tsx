@@ -5,7 +5,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { AlertCircle, Book, Loader2, Eye, EyeOff } from "lucide-react";
-import { createUserSession, getUserId, signup, getGoogleAuthUrl } from "~/services/auth/auth.server";
+import { createUserSession, getUserId, signup, getGoogleAuthUrl, getSafeRedirectUrl } from "~/services/auth/auth.server";
 import type { Route } from "./+types";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -29,11 +29,20 @@ export async function action({ request }: Route.ActionArgs) {
     const formData = await request.formData();
     const intent = formData.get("intent");
 
+    // Get safe redirect URL from query params
+    const safeRedirectUrl = getSafeRedirectUrl(request);
+
     // Handle Google OAuth
     if (intent === "google") {
         const url = new URL(request.url);
         const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${url.origin}/auth/google/callback`;
-        const googleAuthUrl = await getGoogleAuthUrl(redirectUri);
+
+        // Get redirectTo from query params
+        const redirectTo = url.searchParams.get("redirectTo");
+
+        // Pass redirectTo via Google OAuth state parameter
+        const googleAuthUrl = await getGoogleAuthUrl(redirectUri, redirectTo || undefined);
+
         return redirect(googleAuthUrl);
     }
 
@@ -68,7 +77,7 @@ export async function action({ request }: Route.ActionArgs) {
 
     try {
         const user = await signup({ email, password, username, fullName });
-        return createUserSession(user.id, "/app/dashboard");
+        return createUserSession(user.id, safeRedirectUrl);
     } catch (error: any) {
         console.error("Register error:", error);
 
