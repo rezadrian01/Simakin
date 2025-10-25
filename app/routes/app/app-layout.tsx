@@ -5,7 +5,7 @@ import type { Route } from "../+types/home";
 
 export async function loader({ request }: Route.LoaderArgs) {
     const { requireUserId } = await import("~/services/auth/auth.server");
-    const userId = await requireUserId(request);
+    await requireUserId(request);
     return {};
 }
 
