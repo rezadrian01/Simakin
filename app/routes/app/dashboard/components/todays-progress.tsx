@@ -25,7 +25,7 @@ export const TodaysProgress: React.FC<TodaysProgressProps> = ({ userStats }) => 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-simakin-soft-green flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-white" />
+                            <CheckCircle className="w-5 h-5 text-primary" />
                         </div>
                         <div>
                             <p className="font-medium text-foreground">Sesi Selesai</p>
@@ -42,7 +42,7 @@ export const TodaysProgress: React.FC<TodaysProgressProps> = ({ userStats }) => 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-simakin-soft-yellow flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-white" />
+                            <Clock className="w-5 h-5 text-primary" />
                         </div>
                         <div>
                             <p className="font-medium text-foreground">Target Mingguan</p>

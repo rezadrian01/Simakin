@@ -88,7 +88,7 @@ export default function LeaderboardPage() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 rounded-full bg-simakin-primary flex items-center justify-center">
-                                <Trophy className="w-8 h-8 text-white" />
+                                <Trophy className="w-8 h-8 text-primary" />
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Peringkat Global Anda</p>
