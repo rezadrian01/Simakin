@@ -20,6 +20,7 @@ import {
 import { BookOpenText, ChevronUp, Gamepad2, Home, TrendingUpDown, Trophy, User2 } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import { APP_NAME } from "~/lib/constant"
+import { Form } from "react-router"
 
 export function AppSidebar() {
     const { state } = useSidebar();
@@ -104,8 +105,12 @@ export function AppSidebar() {
                                 <DropdownMenuItem>
                                     <span>Billing</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <span>Sign out</span>
+                                <DropdownMenuItem asChild>
+                                    <Form method="post" action="/auth/signout" className="w-full">
+                                        <button type="submit" className="w-full text-left">
+                                            Sign out
+                                        </button>
+                                    </Form>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
