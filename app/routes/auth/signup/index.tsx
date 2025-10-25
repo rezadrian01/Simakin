@@ -68,7 +68,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     if (password !== confirmPassword) {
-        return { error: "Password must to be same" }
+        return { error: "Password must be the same" }
     }
 
     if (password.length < 6) {
