@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import { FormStrategy } from "remix-auth-form";
 import bcrypt from "bcryptjs";
 import { createCookieSessionStorage, redirect } from "react-router";
 import { db } from "~/lib/db.server";
@@ -22,7 +21,7 @@ export const sessionStorage = createCookieSessionStorage({
     httpOnly: true,
     path: "/",
     sameSite: "lax",
-    secrets: [process.env.SESSION_SECRET || "supersecret"], // replace this with an actual secret
+    secrets: [sessionSecret],
     secure: process.env.NODE_ENV === "production",
   },
 });
@@ -138,6 +137,124 @@ export async function signin({
     user.passwordHash ?? ""
   );
   if (!isCorrectPassword) return null;
+
+  return { id: user.id, email: user.email };
+}
+
+// Google OAuth helpers
+export async function getGoogleAuthUrl(redirectUri: string) {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  if (!googleClientId) {
+    throw new Error("GOOGLE_CLIENT_ID is not configured");
+  }
+
+  const params = new URLSearchParams({
+    client_id: googleClientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid email profile",
+    access_type: "offline",
+    prompt: "consent",
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function exchangeGoogleCodeForToken(
+  code: string,
+  redirectUri: string
+) {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!googleClientId || !googleClientSecret) {
+    throw new Error("Google OAuth credentials are not configured");
+  }
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: googleClientId,
+      client_secret: googleClientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to exchange code for token");
+  }
+
+  return response.json();
+}
+
+export async function getGoogleUserInfo(accessToken: string) {
+  const response = await fetch(
+    "https://www.googleapis.com/oauth2/v2/userinfo",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to get user info from Google");
+  }
+
+  return response.json();
+}
+
+export async function handleGoogleAuth({
+  email,
+  fullName,
+  avatarUrl,
+}: {
+  email: string;
+  fullName: string;
+  avatarUrl?: string;
+}) {
+  // Check if user exists
+  let user = await db.user.findUnique({
+    where: { email },
+  });
+
+  // If user doesn't exist, create new account
+  if (!user) {
+    // Generate username from email
+    const baseUsername = email.split("@")[0];
+    let username = baseUsername;
+    let counter = 1;
+
+    // Make sure username is unique
+    while (await db.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    user = await db.user.create({
+      data: {
+        email,
+        username,
+        fullName,
+        avatarUrl,
+        // No password hash for OAuth users
+        passwordHash: null,
+      },
+    });
+  } else {
+    // Update avatar if changed
+    if (avatarUrl && user.avatarUrl !== avatarUrl) {
+      user = await db.user.update({
+        where: { id: user.id },
+        data: { avatarUrl },
+      });
+    }
+  }
 
   return { id: user.id, email: user.email };
 }
