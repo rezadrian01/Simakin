@@ -1,8 +1,9 @@
-import React, { useRef, useState } from "react";
-import { Form, useNavigation } from "react-router";
+import React, { useRef, useState, useEffect } from "react";
+import { Form, useNavigation, useActionData } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Mic, Square, RotateCcw, Send, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Mic, Square, RotateCcw, Send, Loader2, AlertCircle } from "lucide-react";
 import type { MemorizationSessionProps } from "~/routes/app/memorization/types";
 
 const MemorizationSession: React.FC<MemorizationSessionProps> = ({
@@ -12,6 +13,7 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
     type,
 }) => {
     const navigation = useNavigation();
+    const actionData = useActionData<{ error?: string }>();
     const [recording, setRecording] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -22,6 +24,13 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
     const audioChunks = useRef<Blob[]>([]);
 
     const isSubmitting = navigation.state === "submitting";
+
+    // Handle server errors from action
+    useEffect(() => {
+        if (actionData?.error) {
+            setError(actionData.error);
+        }
+    }, [actionData]);
 
     const handleStartRecording = async () => {
         try {
@@ -174,11 +183,12 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
 
                         {/* Error Message */}
                         {error && (
-                            <Card className="border-destructive">
-                                <CardContent className="pt-4 text-destructive">
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription className="ml-2">
                                     {error}
-                                </CardContent>
-                            </Card>
+                                </AlertDescription>
+                            </Alert>
                         )}
 
                         {/* Submit Button */}

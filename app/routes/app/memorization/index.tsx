@@ -1,20 +1,36 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
-import { BookOpenText, Plus, Calendar, TrendingUp, Clock, Award, Target } from 'lucide-react'
-import { Link, useLoaderData } from 'react-router'
+import { BookOpenText, Plus, Calendar, TrendingUp, Clock, Award, Target, Loader2 } from 'lucide-react'
+import { Link, useLoaderData, useFetcher } from 'react-router'
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
 import { db } from '~/lib/db.server'
 import { requireUserId } from '~/services/auth/auth.server'
+
+const ITEMS_PER_PAGE = 10;
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
     // Get authenticated user ID
     const userId = await requireUserId(request);
 
-    // Fetch recitations from database
+    // Get pagination params from URL
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = ITEMS_PER_PAGE;
+    const skip = (page - 1) * limit;
+
+    // Fetch total count for pagination
+    const totalCount = await db.recitation.count({
+        where: {
+            userId: userId,
+            status: 'COMPLETED',
+        },
+    });
+
+    // Fetch recitations from database with pagination
     const recitations = await db.recitation.findMany({
         where: {
             userId: userId,
@@ -26,7 +42,8 @@ export async function loader({ request }: Route.LoaderArgs) {
         orderBy: {
             createdAt: 'desc',
         },
-        take: 20, // Limit to 20 most recent
+        take: limit,
+        skip: skip,
     });
 
     // Fetch surah names from Equran API for each unique surah
@@ -68,15 +85,25 @@ export async function loader({ request }: Route.LoaderArgs) {
         };
     });
 
-    // Calculate stats
+    // Calculate stats (for all data, not just current page)
+    const allRecitations = await db.recitation.findMany({
+        where: {
+            userId: userId,
+            status: 'COMPLETED',
+        },
+        include: {
+            feedback: true,
+        },
+    });
+
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const weeklyRecitations = recitations.filter(
+    const weeklyRecitations = allRecitations.filter(
         r => new Date(r.createdAt) >= oneWeekAgo
     );
 
-    const allScores = recitations
+    const allScores = allRecitations
         .filter(r => r.feedback)
         .map(r => {
             if (!r.feedback) return 0;
@@ -92,16 +119,23 @@ export async function loader({ request }: Route.LoaderArgs) {
         : 0;
 
     // Calculate total time (in minutes)
-    const totalMinutes = recitations.reduce((acc, r) => acc + (r.duration || 0), 0);
+    const totalMinutes = allRecitations.reduce((acc, r) => acc + (r.duration || 0), 0);
     const totalTime = Math.ceil(totalMinutes / 60);
+
+    const hasMore = skip + recitations.length < totalCount;
 
     return {
         recentRecitations,
         stats: {
-            total: recitations.length,
+            total: totalCount,
             weekly: weeklyRecitations.length,
             avgAccuracy,
             totalTime,
+        },
+        pagination: {
+            currentPage: page,
+            hasMore,
+            totalCount,
         }
     };
 }
@@ -109,6 +143,53 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function MemorizationPage() {
     const data = useLoaderData<typeof loader>()
+    const fetcher = useFetcher<typeof loader>()
+    const [allRecitations, setAllRecitations] = useState(data.recentRecitations)
+    const [currentPage, setCurrentPage] = useState(data.pagination.currentPage)
+    const [hasMore, setHasMore] = useState(data.pagination.hasMore)
+
+    // Ref for the loader element (intersection observer target)
+    const loaderRef = useRef<HTMLDivElement>(null)
+
+    // Append new data when fetcher completes
+    useEffect(() => {
+        if (fetcher.data?.recentRecitations) {
+            setAllRecitations(prev => [...prev, ...fetcher.data!.recentRecitations])
+            setCurrentPage(fetcher.data.pagination.currentPage)
+            setHasMore(fetcher.data.pagination.hasMore)
+        }
+    }, [fetcher.data])
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const first = entries[0]
+                // If the loader element is visible and we have more data and not currently loading
+                if (first.isIntersecting && hasMore && fetcher.state === 'idle') {
+                    const nextPage = currentPage + 1
+                    fetcher.load(`/app/memorization?page=${nextPage}`)
+                }
+            },
+            {
+                threshold: 0.1, // Trigger when 10% of the element is visible
+                rootMargin: '100px', // Start loading 100px before the element is visible
+            }
+        )
+
+        const currentLoader = loaderRef.current
+        if (currentLoader) {
+            observer.observe(currentLoader)
+        }
+
+        return () => {
+            if (currentLoader) {
+                observer.unobserve(currentLoader)
+            }
+        }
+    }, [hasMore, currentPage, fetcher])
+
+    const isLoadingMore = fetcher.state === 'loading'
 
     return (
         <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -193,73 +274,90 @@ export default function MemorizationPage() {
             </div>
 
             {/* Sessions Grid */}
-            {data.recentRecitations.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {data.recentRecitations.map((session) => (
-                        <Link
-                            key={session.id}
-                            to={`/app/memorization/result/${session.id}`}
-                        >
-                            <Card className="group hover:shadow-lg hover:border-simakin-primary/50 transition-all cursor-pointer border-2 h-full overflow-hidden">
-                                <CardContent className="p-0">
-                                    {/* Header Section with Gradient */}
-                                    <div className="bg-linear-to-r from-simakin-primary/5 to-simakin-primary/10 p-5 border-b">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <Badge
-                                                    variant="secondary"
-                                                    className={`mb-2 ${session.mode === 'HAFALAN'
+            {allRecitations.length > 0 ? (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {allRecitations.map((session) => (
+                            <Link
+                                key={session.id}
+                                to={`/app/memorization/result/${session.id}`}
+                            >
+                                <Card className="group hover:shadow-lg hover:border-simakin-primary/50 transition-all cursor-pointer border-2 h-full overflow-hidden">
+                                    <CardContent className="p-0">
+                                        {/* Header Section with Gradient */}
+                                        <div className="bg-linear-to-r from-simakin-primary/5 to-simakin-primary/10 p-5 border-b">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={`mb-2 ${session.mode === 'HAFALAN'
                                                             ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300'
                                                             : 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300'
-                                                        }`}
-                                                >
-                                                    {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Murojaah'}
-                                                </Badge>
-                                                <h3 className="text-xl font-bold text-foreground mb-1 truncate group-hover:text-simakin-primary transition-colors">
-                                                    {session.surah}
-                                                </h3>
-                                                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                                    <Target className="w-3.5 h-3.5" />
-                                                    Ayat {session.ayahRange}
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-col items-center gap-1">
-                                                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-simakin-primary to-simakin-primary/80 shadow-md">
-                                                    <div className="text-center">
-                                                        <p className="text-2xl font-bold text-white leading-none">{session.accuracy}</p>
-                                                        <p className="text-[10px] text-white/90 font-medium">SKOR</p>
+                                                            }`}
+                                                    >
+                                                        {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Murojaah'}
+                                                    </Badge>
+                                                    <h3 className="text-xl font-bold text-foreground mb-1 truncate group-hover:text-simakin-primary transition-colors">
+                                                        {session.surah}
+                                                    </h3>
+                                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                                        <Target className="w-3.5 h-3.5" />
+                                                        Ayat {session.ayahRange}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-primary to-primary/80 shadow-md">
+                                                        <div className="text-center">
+                                                            <p className="text-2xl font-bold text-white leading-none">{session.accuracy}</p>
+                                                            <p className="text-[10px] text-white/90 font-medium">SKOR</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Bottom Section */}
-                                    <div className="p-5 bg-card">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-4">
-                                                {session.duration > 0 && (
+                                        {/* Bottom Section */}
+                                        <div className="p-5 bg-card">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <div className="flex items-center gap-4">
+                                                    {session.duration > 0 && (
+                                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                                            <Clock className="w-4 h-4" />
+                                                            <span className="font-medium">{Math.ceil(session.duration / 60)} menit</span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                        <Clock className="w-4 h-4" />
-                                                        <span className="font-medium">{Math.ceil(session.duration / 60)} menit</span>
+                                                        <Award className="w-4 h-4" />
+                                                        <span className="font-medium">Tajwid: {Math.round(session.tajweed)}%</span>
                                                     </div>
-                                                )}
-                                                <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                    <Award className="w-4 h-4" />
-                                                    <span className="font-medium">Tajwid: {Math.round(session.tajweed)}%</span>
                                                 </div>
                                             </div>
+                                            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                {formatDateToIndonesian(session.date)}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            {formatDateToIndonesian(session.date)}
-                                        </p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* Infinite Scroll Trigger & Loading Indicator */}
+                    {hasMore && (
+                        <div
+                            ref={loaderRef}
+                            className="mt-8 flex justify-center items-center py-8"
+                        >
+                            {isLoadingMore && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span className="text-sm">Memuat lebih banyak...</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
             ) : (
                 <Card>
                     <CardContent className="py-12">
