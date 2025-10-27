@@ -5,87 +5,101 @@ import { BookOpenText, Plus, Calendar, TrendingUp, Clock } from 'lucide-react'
 import { Link, useLoaderData } from 'react-router'
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
+import { db } from '~/lib/db.server'
+import { requireUserId } from '~/services/auth/auth.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
-    // TODO: Get userId from session/auth
-    const userId = "temp-user-id"
+    // Get authenticated user ID
+    const userId = await requireUserId(request);
 
-    // DUMMY DATA - Replace with actual database queries
-    return {
-        recentRecitations: [
-            {
-                id: "1",
-                surah: "Al-Fatihah",
-                mode: "HAFALAN" as const,
-                date: new Date().toISOString(),
-                accuracy: 95,
-                tajweed: 90,
-            },
-            {
-                id: "2",
-                surah: "Al-Ikhlas",
-                mode: "MUROJAAH" as const,
-                date: new Date(Date.now() - 86400000).toISOString(),
-                accuracy: 88,
-                tajweed: 92,
-            },
-            {
-                id: "3",
-                surah: "Al-Baqarah",
-                mode: "HAFALAN" as const,
-                date: new Date(Date.now() - 172800000).toISOString(),
-                accuracy: 82,
-                tajweed: 85,
-            },
-            {
-                id: "4",
-                surah: "An-Nas",
-                mode: "MUROJAAH" as const,
-                date: new Date(Date.now() - 259200000).toISOString(),
-                accuracy: 90,
-                tajweed: 88,
-            },
-            {
-                id: "5",
-                surah: "Al-Falaq",
-                mode: "HAFALAN" as const,
-                date: new Date(Date.now() - 345600000).toISOString(),
-                accuracy: 78,
-                tajweed: 80,
-            },
-            {
-                id: "6",
-                surah: "Al-Mulk",
-                mode: "HAFALAN" as const,
-                date: new Date(Date.now() - 432000000).toISOString(),
-                accuracy: 85,
-                tajweed: 87,
-            },
-            {
-                id: "7",
-                surah: "Yasin",
-                mode: "MUROJAAH" as const,
-                date: new Date(Date.now() - 518400000).toISOString(),
-                accuracy: 92,
-                tajweed: 94,
-            },
-            {
-                id: "8",
-                surah: "Ar-Rahman",
-                mode: "HAFALAN" as const,
-                date: new Date(Date.now() - 604800000).toISOString(),
-                accuracy: 87,
-                tajweed: 89,
+    // Fetch recitations from database
+    const recitations = await db.recitation.findMany({
+        where: {
+            userId: userId,
+            status: 'COMPLETED',
+        },
+        include: {
+            feedback: true,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+        take: 20, // Limit to 20 most recent
+    });
+
+    // Fetch surah names from Equran API for each unique surah
+    const surahNumbers = [...new Set(recitations.map(r => r.surah))];
+    const surahDataMap = new Map();
+
+    await Promise.all(
+        surahNumbers.map(async (surahNum) => {
+            try {
+                const response = await fetch(`https://equran.id/api/v2/surat/${surahNum}`);
+                const data = await response.json();
+                surahDataMap.set(surahNum, data.data?.namaLatin || `Surah ${surahNum}`);
+            } catch (error) {
+                surahDataMap.set(surahNum, `Surah ${surahNum}`);
             }
-        ],
+        })
+    );
+
+    // Map to display format
+    const recentRecitations = recitations.map(recitation => {
+        const avgScore = recitation.feedback
+            ? Math.round(
+                (recitation.feedback.accuracyScore +
+                    recitation.feedback.tajweedScore +
+                    recitation.feedback.fluencyScore) / 3
+            )
+            : 0;
+
+        return {
+            id: recitation.id,
+            surah: surahDataMap.get(recitation.surah) || `Surah ${recitation.surah}`,
+            surahNumber: recitation.surah,
+            ayahRange: `${recitation.startAyah}-${recitation.endAyah}`,
+            mode: recitation.mode,
+            date: recitation.createdAt.toISOString(),
+            accuracy: avgScore,
+            tajweed: recitation.feedback?.tajweedScore || 0,
+            duration: recitation.duration || 0,
+        };
+    });
+
+    // Calculate stats
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const weeklyRecitations = recitations.filter(
+        r => new Date(r.createdAt) >= oneWeekAgo
+    );
+
+    const allScores = recitations
+        .filter(r => r.feedback)
+        .map(r => {
+            if (!r.feedback) return 0;
+            return (
+                r.feedback.accuracyScore +
+                r.feedback.tajweedScore +
+                r.feedback.fluencyScore
+            ) / 3;
+        });
+
+    const avgAccuracy = allScores.length > 0
+        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+        : 0;
+
+    return {
+        recentRecitations,
         stats: {
-            total: 23,
-            weekly: 5,
-            avgAccuracy: 87
+            total: recitations.length,
+            weekly: weeklyRecitations.length,
+            avgAccuracy,
         }
-    }
+    };
 }
+
 
 export default function MemorizationPage() {
     const data = useLoaderData<typeof loader>()
@@ -160,23 +174,30 @@ export default function MemorizationPage() {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${session.mode === 'HAFALAN'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-amber-100 text-amber-700'
+                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
                                                     }`}>
-                                                    {session.mode === 'HAFALAN' ? '✓ Selesai' : 'Sedang Berlangsung'}
+                                                    {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Murojaah'}
                                                 </span>
                                             </div>
                                             <h3 className="text-lg font-semibold text-foreground mb-1">
                                                 {session.surah}
                                             </h3>
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                                <span>{session.mode === 'HAFALAN' ? 'Ziyadah' : 'Muroja\'ah'}</span>
+                                                <span>Ayat {session.ayahRange}</span>
+                                                {session.duration > 0 && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <Clock className="w-3 h-3" />
+                                                        <span>{Math.ceil(session.duration / 60)} menit</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-simakin-primary/10">
                                             <div className="text-center">
                                                 <p className="text-2xl font-bold text-simakin-primary">{session.accuracy}</p>
-                                                <p className="text-[10px] text-muted-foreground">/10</p>
+                                                <p className="text-[10px] text-muted-foreground">%</p>
                                             </div>
                                         </div>
                                     </div>

@@ -5,6 +5,7 @@ import MemorizationResult from './memorization-result';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { db } from '~/lib/db.server';
 
 // Loader function to fetch memorization result
 export async function loader({ params }: Route.LoaderArgs) {
@@ -18,61 +19,84 @@ export async function loader({ params }: Route.LoaderArgs) {
     }
 
     try {
-        // TODO: Fetch from database using Prisma
-        // const result = await db.recitation.findUnique({
-        //   where: { id: recitationId },
-        //   include: { feedback: true }
-        // })
+        // Fetch from database using Prisma
+        const recitation = await db.recitation.findUnique({
+            where: { id: recitationId },
+            include: {
+                feedback: true,
+            },
+        });
 
-        // DUMMY DATA - Replace with actual database query
-        const dummyResult = {
-            id: recitationId,
+        if (!recitation || !recitation.feedback) {
+            return {
+                error: 'Data hasil tidak ditemukan',
+                result: null,
+            };
+        }
+
+        // Fetch surah data
+        const surahResponse = await fetch(
+            `https://equran.id/api/v2/surat/${recitation.surah}`
+        );
+        const surahData = await surahResponse.json();
+
+        // Extract original Quran text
+        const ayatArr = surahData.data?.ayat || [];
+        const start = recitation.startAyah - 1;
+        const end = recitation.endAyah;
+        const originalQuranText = ayatArr
+            .slice(start, end)
+            .map((ayat: { teksArab: string }) => ayat.teksArab)
+            .join(' ');
+
+        const feedback = recitation.feedback;
+        const metadataQuran = feedback.metadataQuran as any;
+
+        // Calculate average score
+        const avgScore =
+            (feedback.accuracyScore + feedback.tajweedScore + feedback.fluencyScore) / 3;
+
+        const result = {
+            id: recitation.id,
             surah: {
-                name: 'Al-Fatihah',
-                number: 1,
+                name: surahData.data?.namaLatin || 'Unknown',
+                number: recitation.surah,
             },
             ayahRange: {
-                start: 1,
-                end: 7,
+                start: recitation.startAyah,
+                end: recitation.endAyah,
             },
-            type: 'ziyadah' as const,
-            date: new Date().toISOString(),
-            duration: 180,
-            score: 85,
-            transcription: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-            originalText: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+            type: recitation.mode === 'HAFALAN' ? ('ziyadah' as const) : ('murojaah' as const),
+            date: recitation.createdAt.toISOString(),
+            duration: recitation.duration || 0,
+            score: Math.round(avgScore),
+            transcription: feedback.transcription || '',
+            originalText: originalQuranText,
             errors: {
-                memorization: 2,
-                tajweed: 1,
-                waqaf: 0,
+                memorization: Array.isArray(feedback.memorizationErrs)
+                    ? (feedback.memorizationErrs as any[]).length
+                    : 0,
+                tajweed: Array.isArray(feedback.tajweedErrs)
+                    ? (feedback.tajweedErrs as any[]).length
+                    : 0,
+                waqaf: Array.isArray(feedback.waqfErrs)
+                    ? (feedback.waqfErrs as any[]).length
+                    : 0,
             },
-            memorizationErrors: [
-                {
-                    ayah: 1,
-                    type: 'Kata Terlewat',
-                    detail: 'Kata "ٱلرَّحْمَٰنِ" terlewat dalam bacaan',
-                },
-                {
-                    ayah: 3,
-                    type: 'Urutan Salah',
-                    detail: 'Urutan kata tidak sesuai dengan teks asli',
-                },
-            ],
-            tajweedErrors: [
-                {
-                    ayah: 1,
-                    type: 'Mad',
-                    letter: 'اللَّهِ',
-                    suggestion: 'Perpanjang bacaan mad pada huruf "ا"',
-                },
-            ],
-            waqafErrors: [],
-            generalSuggestion: 'Bacaan sudah cukup baik, namun perlu lebih memperhatikan tajwid pada huruf mad dan ghunnah. Ulangi bacaan beberapa kali untuk memperkuat hafalan.',
+            memorizationErrors: (feedback.memorizationErrs as any[]) || [],
+            tajweedErrors: (feedback.tajweedErrs as any[]) || [],
+            waqafErrors: (feedback.waqfErrs as any[]) || [],
+            generalSuggestion: feedback.generalAdvice || '',
+            scores: {
+                accuracy: feedback.accuracyScore,
+                tajweed: feedback.tajweedScore,
+                fluency: feedback.fluencyScore,
+            },
         };
 
         return {
             error: null,
-            result: dummyResult,
+            result,
         };
     } catch (error) {
         console.error('Error fetching result:', error);

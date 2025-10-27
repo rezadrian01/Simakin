@@ -16,6 +16,7 @@ export interface MemorizationSessionProps {
   };
   startAyah: string;
   endAyah: string;
+  type: MemorizationType;
 }
 
 export interface MemorizationError {
@@ -46,20 +47,26 @@ export interface QuranMetadata {
 
 export interface ValidationResult {
   transcription: string;
-  memorizationErrors: MemorizationError[];
-  tajweedErrors: TajweedError[];
-  waqafErrors: WaqafError[];
-  generalSuggestion: string;
-  quranMetadata: QuranMetadata;
+  kesalahan_hafalan: MemorizationError[];
+  kesalahan_tajwid: TajweedError[];
+  kesalahan_waqaf: WaqafError[];
+  saran_umum: string;
+  accuracy_score: number;
+  tajweed_score: number;
+  fluency_score: number;
+  metadata_quran: QuranMetadata;
 }
 
 export interface ApiResponse {
   message: string;
-  data: {
-    cleanedTranscribedAudio: string;
+  recitationId?: string;
+  data?: {
+    transcription: string;
     originalQuranText: string;
-    cleanedMemorizeValidationResult: ValidationResult;
+    validation: ValidationResult;
   };
+  error?: string;
+  details?: string;
 }
 
 export interface MemorizationResultData {
@@ -87,4 +94,9 @@ export interface MemorizationResultData {
   tajweedErrors?: TajweedError[];
   waqafErrors?: WaqafError[];
   generalSuggestion?: string;
+  scores?: {
+    accuracy: number;
+    tajweed: number;
+    fluency: number;
+  };
 }

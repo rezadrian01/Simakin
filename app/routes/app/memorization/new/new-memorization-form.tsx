@@ -1,33 +1,30 @@
 import React, { useEffect, useState } from 'react';
+import { Form, Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '~/components/ui/form';
+import { Form as UIForm, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '~/components/ui/form';
 import { Badge } from '~/components/ui/badge';
-import { BookOpen, Plus } from 'lucide-react';
+import { BookOpen, ArrowLeft } from 'lucide-react';
 import type { QuranSurah, MemorizationType } from '~/routes/app/memorization/types';
 import { MemorizationSchema, type MemorizationFormValues } from '~/routes/app/memorization/utils/schema';
 
 interface NewMemorizationFormProps {
     quranSurahs: QuranSurah[];
-    onSubmit: (values: MemorizationFormValues & { type: MemorizationType }) => void;
-    onCancel: () => void;
 }
 
 const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
     quranSurahs,
-    onSubmit,
-    onCancel
 }) => {
     const [memorizationType, setMemorizationType] = useState<MemorizationType>('ziyadah');
 
     const defaultSurah = quranSurahs.length > 0 ? quranSurahs[0].nomor.toString() : "";
     const defaultAyat = quranSurahs.length > 0 ? quranSurahs[0].jumlahAyat : 1;
 
-    const form = useForm<MemorizationFormValues>({
+    const uiform = useForm<MemorizationFormValues>({
         resolver: zodResolver(MemorizationSchema),
         defaultValues: {
             surah: defaultSurah,
@@ -38,22 +35,18 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
     });
 
     // Update ayat range when surah changes
-    const selectedSurah = form.watch("surah") || defaultSurah;
+    const selectedSurah = uiform.watch("surah") || defaultSurah;
     useEffect(() => {
         if (quranSurahs.length > 0 && selectedSurah) {
             const surah = quranSurahs.find(
                 (s) => s.nomor.toString() === selectedSurah
             );
             if (surah) {
-                form.setValue("start", "1");
-                form.setValue("end", surah.jumlahAyat.toString());
+                uiform.setValue("start", "1");
+                uiform.setValue("end", surah.jumlahAyat.toString());
             }
         }
-    }, [selectedSurah, quranSurahs, form]);
-
-    const handleSubmit = (values: MemorizationFormValues) => {
-        onSubmit({ ...values, type: memorizationType });
-    };
+    }, [selectedSurah, quranSurahs, uiform]);
 
     const surahOptions = quranSurahs.map((surah) => ({
         value: surah.nomor.toString(),
@@ -78,8 +71,11 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <UIForm {...uiform}>
+                    <Form method="post" className="space-y-6">
+                        {/* Hidden field for type */}
+                        <input type="hidden" name="type" value={memorizationType} />
+
                         {/* Memorization Type Selection */}
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-foreground">Tipe Memorization</label>
@@ -109,12 +105,12 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
 
                         {/* Surah Selection */}
                         <FormField
-                            control={form.control}
+                            control={uiform.control}
                             name="surah"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Surah</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} name="surah">
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Pilih Surah" />
@@ -144,7 +140,7 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                         {/* Ayat Range */}
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
-                                control={form.control}
+                                control={uiform.control}
                                 name="start"
                                 render={({ field }) => (
                                     <FormItem>
@@ -166,7 +162,7 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                 )}
                             />
                             <FormField
-                                control={form.control}
+                                control={uiform.control}
                                 name="end"
                                 render={({ field }) => (
                                     <FormItem>
@@ -174,7 +170,7 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                         <FormControl>
                                             <Input
                                                 type="number"
-                                                min={parseInt(form.getValues("start")) || 1}
+                                                min={parseInt(uiform.getValues("start")) || 1}
                                                 max={maxAyat}
                                                 placeholder="1"
                                                 {...field}
@@ -196,9 +192,9 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                     <h4 className="font-medium text-foreground mb-2">Ringkasan Sesi</h4>
                                     <div className="text-sm text-muted-foreground space-y-1">
                                         <p><span className="font-medium">Surah:</span> {currentSurah.namaLatin} ({currentSurah.nama})</p>
-                                        <p><span className="font-medium">Range:</span> Ayat {form.watch("start")} - {form.watch("end")}</p>
+                                        <p><span className="font-medium">Range:</span> Ayat {uiform.watch("start")} - {uiform.watch("end")}</p>
                                         <p><span className="font-medium">Tipe:</span> {memorizationType === 'ziyadah' ? 'Ziyadah' : 'Murojaah'}</p>
-                                        <p><span className="font-medium">Total Ayat:</span> {Math.max(0, parseInt(form.watch("end") || "1") - parseInt(form.watch("start") || "1") + 1)} ayat</p>
+                                        <p><span className="font-medium">Total Ayat:</span> {Math.max(0, parseInt(uiform.watch("end") || "1") - parseInt(uiform.watch("start") || "1") + 1)} ayat</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -211,19 +207,22 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                 size="lg"
                                 className="font-semibold py-4 shadow-lg hover:shadow-xl transition-all duration-300"
                             >
-                                <Plus className="w-5 h-5 mr-3" />
+                                <BookOpen className="w-5 h-5 mr-3" />
                                 Mulai Memorization
                             </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={onCancel}
-                            >
-                                Batal
-                            </Button>
+                            <Link to="/app/memorization">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="w-full"
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Batal
+                                </Button>
+                            </Link>
                         </div>
-                    </form>
-                </Form>
+                    </Form>
+                </UIForm>
             </CardContent>
         </Card>
     );

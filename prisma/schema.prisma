@@ -106,11 +106,11 @@ model Feedback {
   id               String     @id @default(cuid())
   recitationId     String     @unique
   recitation       Recitation @relation(fields: [recitationId], references: [id])
-  transcription    String?
+  transcription    String?    @db.Text
   memorizationErrs Json?
   tajweedErrs      Json?
   waqfErrs         Json?
-  generalAdvice    String?
+  generalAdvice    String?    @db.Text
   accuracyScore    Float
   tajweedScore     Float
   fluencyScore     Float

@@ -1,25 +1,28 @@
 import React, { useRef, useState } from "react";
+import { Form, useNavigation } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Mic, Square, RotateCcw, Send, Loader2 } from "lucide-react";
-import type { MemorizationSessionProps, ApiResponse } from "~/routes/app/memorization/types";
+import type { MemorizationSessionProps } from "~/routes/app/memorization/types";
 
 const MemorizationSession: React.FC<MemorizationSessionProps> = ({
     surah,
     startAyah,
     endAyah,
+    type,
 }) => {
+    const navigation = useNavigation();
     const [recording, setRecording] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const audioChunks = useRef<Blob[]>([]);
+
+    const isSubmitting = navigation.state === "submitting";
 
     const handleStartRecording = async () => {
         try {
@@ -71,47 +74,6 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!audioBlob) {
-            setError("Belum ada audio yang direkam.");
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        setApiResponse(null);
-
-        const formData = new FormData();
-        formData.append("audio", audioBlob, "recording.webm");
-        formData.append("surat", surah.number.toString());
-        formData.append("startAyat", startAyah);
-        formData.append("endAyat", endAyah);
-
-        try {
-            const response = await fetch("/api/memorization", {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result: ApiResponse = await response.json();
-            setApiResponse(result);
-
-            // Reset form
-            setAudioUrl(null);
-            setAudioBlob(null);
-        } catch (error) {
-            console.error("Error submitting session:", error);
-            setError("Terjadi kesalahan saat mengirim audio.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const resetForm = () => {
         if (recording) {
             handleStopRecording();
@@ -123,7 +85,6 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
 
         setAudioUrl(null);
         setAudioBlob(null);
-        setApiResponse(null);
         setError(null);
     };
 
@@ -139,7 +100,30 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <Form method="post" encType="multipart/form-data" className="space-y-4">
+                        {/* Hidden fields */}
+                        <input type="hidden" name="surat" value={surah.number} />
+                        <input type="hidden" name="startAyat" value={startAyah} />
+                        <input type="hidden" name="endAyat" value={endAyah} />
+                        <input type="hidden" name="type" value={type} />
+
+                        {/* Audio file input (hidden) */}
+                        {audioBlob && (
+                            <input
+                                type="file"
+                                name="audio"
+                                style={{ display: 'none' }}
+                                ref={(input) => {
+                                    if (input && audioBlob) {
+                                        const file = new File([audioBlob], "recording.webm", { type: "audio/webm" });
+                                        const dataTransfer = new DataTransfer();
+                                        dataTransfer.items.add(file);
+                                        input.files = dataTransfer.files;
+                                    }
+                                }}
+                            />
+                        )}
+
                         {/* Recording Controls */}
                         <div className="flex gap-3">
                             {recording ? (
@@ -148,7 +132,7 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                                     onClick={handleStopRecording}
                                     variant="destructive"
                                     size="lg"
-                                    disabled={isLoading}
+                                    disabled={isSubmitting}
                                 >
                                     <Square className="w-5 h-5 mr-2" />
                                     Stop Recording
@@ -158,7 +142,7 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                                     type="button"
                                     onClick={handleStartRecording}
                                     size="lg"
-                                    disabled={isLoading}
+                                    disabled={isSubmitting}
                                 >
                                     <Mic className="w-5 h-5 mr-2" />
                                     Mulai Rekam
@@ -171,7 +155,7 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                                     onClick={resetForm}
                                     variant="outline"
                                     size="lg"
-                                    disabled={isLoading}
+                                    disabled={isSubmitting}
                                 >
                                     <RotateCcw className="w-5 h-5 mr-2" />
                                     Reset
@@ -203,9 +187,9 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                             type="submit"
                             size="lg"
                             className="w-full"
-                            disabled={!audioBlob || isLoading}
+                            disabled={!audioBlob || isSubmitting}
                         >
-                            {isLoading ? (
+                            {isSubmitting ? (
                                 <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                     Memproses...
@@ -217,179 +201,9 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                                 </>
                             )}
                         </Button>
-                    </form>
+                    </Form>
                 </CardContent>
             </Card>
-
-            {/* API Response Display */}
-            {apiResponse && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>📊 Hasil Analisis</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Transcription Comparison */}
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">🎯 Bacaan Anda:</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-right text-lg leading-relaxed" dir="rtl">
-                                        {apiResponse.data.cleanedTranscribedAudio}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">📖 Teks Al-Quran:</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-right text-lg leading-relaxed" dir="rtl">
-                                        {apiResponse.data.originalQuranText}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Metadata */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">📋 Info Sesi:</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div>
-                                        <span className="font-medium">Surah:</span>{" "}
-                                        {apiResponse.data.cleanedMemorizeValidationResult.quranMetadata.surah}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Dari Ayat:</span>{" "}
-                                        {apiResponse.data.cleanedMemorizeValidationResult.quranMetadata.startAyah}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Sampai Ayat:</span>{" "}
-                                        {apiResponse.data.cleanedMemorizeValidationResult.quranMetadata.endAyah}
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Total Ayat:</span>{" "}
-                                        {apiResponse.data.cleanedMemorizeValidationResult.quranMetadata.totalAyah}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Kesalahan Hafalan */}
-                        {apiResponse.data.cleanedMemorizeValidationResult.memorizationErrors.length > 0 && (
-                            <Card className="border-destructive">
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center justify-between">
-                                        <span>❌ Kesalahan Hafalan</span>
-                                        <Badge variant="destructive">
-                                            {apiResponse.data.cleanedMemorizeValidationResult.memorizationErrors.length}
-                                        </Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                    {apiResponse.data.cleanedMemorizeValidationResult.memorizationErrors.map(
-                                        (error, index) => (
-                                            <Card key={index} className="border-l-4 border-l-destructive">
-                                                <CardContent className="pt-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <span className="font-medium">Ayat {error.ayah}</span>
-                                                        <Badge variant="outline">{error.type}</Badge>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">{error.detail}</p>
-                                                </CardContent>
-                                            </Card>
-                                        )
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Kesalahan Tajwid */}
-                        {apiResponse.data.cleanedMemorizeValidationResult.tajweedErrors.length > 0 && (
-                            <Card className="border-orange-500">
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center justify-between">
-                                        <span>🔤 Kesalahan Tajwid</span>
-                                        <Badge className="bg-orange-500">
-                                            {apiResponse.data.cleanedMemorizeValidationResult.tajweedErrors.length}
-                                        </Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                    {apiResponse.data.cleanedMemorizeValidationResult.tajweedErrors.map(
-                                        (error, index) => (
-                                            <Card key={index} className="border-l-4 border-l-orange-500">
-                                                <CardContent className="pt-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <span className="font-medium">Ayat {error.ayah}</span>
-                                                        <Badge variant="outline">{error.type}</Badge>
-                                                    </div>
-                                                    <p className="text-right text-lg mb-2" dir="rtl">
-                                                        {error.letter}
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">{error.suggestion}</p>
-                                                </CardContent>
-                                            </Card>
-                                        )
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Kesalahan Waqaf */}
-                        {apiResponse.data.cleanedMemorizeValidationResult.waqafErrors.length > 0 && (
-                            <Card className="border-yellow-500">
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center justify-between">
-                                        <span>⏸️ Kesalahan Waqaf</span>
-                                        <Badge className="bg-yellow-500">
-                                            {apiResponse.data.cleanedMemorizeValidationResult.waqafErrors.length}
-                                        </Badge>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                    {apiResponse.data.cleanedMemorizeValidationResult.waqafErrors.map(
-                                        (error, index) => (
-                                            <Card key={index} className="border-l-4 border-l-yellow-500">
-                                                <CardContent className="pt-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <span className="font-medium">Ayat {error.ayah}</span>
-                                                        <Badge variant="outline">{error.type}</Badge>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">{error.detail}</p>
-                                                </CardContent>
-                                            </Card>
-                                        )
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Saran Umum */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">💡 Saran Umum</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="leading-relaxed">
-                                    {apiResponse.data.cleanedMemorizeValidationResult.generalSuggestion}
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        {/* Success Message */}
-                        <Card className="border-green-500">
-                            <CardContent className="pt-4 text-center text-green-600 font-medium">
-                                ✅ {apiResponse.message}
-                            </CardContent>
-                        </Card>
-                    </CardContent>
-                </Card>
-            )}
         </div>
     );
 };
