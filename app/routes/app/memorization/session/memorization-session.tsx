@@ -2,7 +2,6 @@ import React, { useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
 import { Mic, Square, RotateCcw, Send, Loader2 } from "lucide-react";
 import type { MemorizationSessionProps } from "~/routes/app/memorization/types";
 
