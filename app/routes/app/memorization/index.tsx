@@ -1,7 +1,8 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { BookOpenText, Plus, Calendar, TrendingUp, Clock } from 'lucide-react'
+import { Badge } from '~/components/ui/badge'
+import { BookOpenText, Plus, Calendar, TrendingUp, Clock, Award, Target } from 'lucide-react'
 import { Link, useLoaderData } from 'react-router'
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
@@ -90,12 +91,17 @@ export async function loader({ request }: Route.LoaderArgs) {
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : 0;
 
+    // Calculate total time (in minutes)
+    const totalMinutes = recitations.reduce((acc, r) => acc + (r.duration || 0), 0);
+    const totalTime = Math.ceil(totalMinutes / 60);
+
     return {
         recentRecitations,
         stats: {
             total: recitations.length,
             weekly: weeklyRecitations.length,
             avgAccuracy,
+            totalTime,
         }
     };
 }
@@ -113,36 +119,62 @@ export default function MemorizationPage() {
             </div>
 
             {/* Stats Bar */}
-            <div className="bg-card rounded-lg border p-6 mb-6">
-                <div className="flex flex-wrap gap-8">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-simakin-primary/10 flex items-center justify-center">
-                            <BookOpenText className="w-6 h-6 text-simakin-primary" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <Card className="border-2">
+                    <CardContent className="p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-simakin-primary/10 flex items-center justify-center shrink-0">
+                                <BookOpenText className="w-6 h-6 text-simakin-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-3xl font-bold text-foreground">{data.stats.total}</p>
+                                <p className="text-sm text-muted-foreground">Total Sesi</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-foreground">{data.stats.total}</p>
-                            <p className="text-sm text-muted-foreground">Total Sesi</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                    <CardContent className="p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                                <Calendar className="w-6 h-6 text-green-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-3xl font-bold text-foreground">{data.stats.weekly}</p>
+                                <p className="text-sm text-muted-foreground">Minggu Ini</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-green-600" />
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                    <CardContent className="p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                                <TrendingUp className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-3xl font-bold text-foreground">{data.stats.avgAccuracy}%</p>
+                                <p className="text-sm text-muted-foreground">Rata-rata Skor</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-foreground">{data.stats.weekly}</p>
-                            <p className="text-sm text-muted-foreground">Minggu Ini</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-2">
+                    <CardContent className="p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                                <Clock className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-3xl font-bold text-foreground">{data.stats.totalTime}</p>
+                                <p className="text-sm text-muted-foreground">Menit Belajar</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                            <TrendingUp className="w-6 h-6 text-yellow-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-foreground">{data.stats.avgAccuracy}%</p>
-                            <p className="text-sm text-muted-foreground">Rata-rata Akurasi</p>
-                        </div>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* CTA Button */}
@@ -168,44 +200,61 @@ export default function MemorizationPage() {
                             key={session.id}
                             to={`/app/memorization/result/${session.id}`}
                         >
-                            <Card className="hover:shadow-md transition-all cursor-pointer border-2 h-full">
-                                <CardContent className="p-5">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${session.mode === 'HAFALAN'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
-                                                    }`}>
+                            <Card className="group hover:shadow-lg hover:border-simakin-primary/50 transition-all cursor-pointer border-2 h-full overflow-hidden">
+                                <CardContent className="p-0">
+                                    {/* Header Section with Gradient */}
+                                    <div className="bg-linear-to-r from-simakin-primary/5 to-simakin-primary/10 p-5 border-b">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <Badge
+                                                    variant="secondary"
+                                                    className={`mb-2 ${session.mode === 'HAFALAN'
+                                                            ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300'
+                                                            : 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300'
+                                                        }`}
+                                                >
                                                     {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Murojaah'}
-                                                </span>
+                                                </Badge>
+                                                <h3 className="text-xl font-bold text-foreground mb-1 truncate group-hover:text-simakin-primary transition-colors">
+                                                    {session.surah}
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                                    <Target className="w-3.5 h-3.5" />
+                                                    Ayat {session.ayahRange}
+                                                </p>
                                             </div>
-                                            <h3 className="text-lg font-semibold text-foreground mb-1">
-                                                {session.surah}
-                                            </h3>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                                <span>Ayat {session.ayahRange}</span>
-                                                {session.duration > 0 && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <Clock className="w-3 h-3" />
-                                                        <span>{Math.ceil(session.duration / 60)} menit</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-simakin-primary/10">
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold text-simakin-primary">{session.accuracy}</p>
-                                                <p className="text-[10px] text-muted-foreground">%</p>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-simakin-primary to-simakin-primary/80 shadow-md">
+                                                    <div className="text-center">
+                                                        <p className="text-2xl font-bold text-white leading-none">{session.accuracy}</p>
+                                                        <p className="text-[10px] text-white/90 font-medium">SKOR</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatDateToIndonesian(session.date)}
-                                    </p>
+                                    {/* Bottom Section */}
+                                    <div className="p-5 bg-card">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center gap-4">
+                                                {session.duration > 0 && (
+                                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span className="font-medium">{Math.ceil(session.duration / 60)} menit</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                                    <Award className="w-4 h-4" />
+                                                    <span className="font-medium">Tajwid: {Math.round(session.tajweed)}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            {formatDateToIndonesian(session.date)}
+                                        </p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </Link>
