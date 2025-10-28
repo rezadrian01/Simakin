@@ -15,6 +15,7 @@ import {
 } from "./prompts";
 import { db } from "~/lib/db.server";
 import { requireUserId } from "~/services/auth/auth.server";
+import { updateUserStreak } from "~/services/streak/streak.server";
 
 // Helper function to handle Gemini API errors
 function handleGeminiError(error: any, step: string): string {
@@ -287,6 +288,7 @@ export async function action({ request }: Route.ActionArgs) {
                     cleanedMemorizeValidationResult.fluency_score) /
                 3;
 
+            // Update user stats and streak
             await db.user.update({
                 where: { id: userId },
                 data: {
@@ -294,6 +296,10 @@ export async function action({ request }: Route.ActionArgs) {
                     totalScore: { increment: avgScore },
                 },
             });
+
+            // Update streak (this handles daily streak logic)
+            const newStreak = await updateUserStreak(userId);
+            console.log(`User streak updated to: ${newStreak} days`);
 
             console.log("Saved to database successfully with ID:", recitation.id);
 

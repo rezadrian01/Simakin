@@ -8,11 +8,27 @@ import RecentSessionsCard from './components/recent-sessions-card'
 import StatsOverview from './components/stats-overview'
 import TodaysProgress from './components/todays-progress'
 import type { Route } from './+types/index'
+import { requireUserId } from '~/services/auth/auth.server'
+import { db } from '~/lib/db.server'
+import { getUserStreak } from '~/services/streak/streak.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
-    // TODO: Get userId from session/auth
-    const userId = "temp-user-id" // Replace with actual auth
+    const userId = await requireUserId(request);
+
+    // Fetch user data with streak
+    const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+            streakDays: true,
+            totalSessions: true,
+            totalScore: true,
+            lastActivityDate: true,
+        },
+    });
+
+    // Get current streak (this checks if streak is still valid)
+    const currentStreak = await getUserStreak(userId);
 
     // DUMMY DATA - Replace with actual database queries
     return {
@@ -21,8 +37,8 @@ export async function loader({ request }: Route.LoaderArgs) {
             totalJuzMemorized: 2,
             recitationAccuracy: 87,
             tajweedScore: 92,
-            totalEXP: 1450,
-            currentStreak: 7,
+            totalEXP: user?.totalScore || 0,
+            currentStreak: currentStreak,
             todaysSessions: 2,
             weeklyGoal: 10,
             weeklyProgress: 6,

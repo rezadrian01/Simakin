@@ -161,7 +161,8 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
   Return only JSON, no additional commentary.
   `;
   return genAI.models.generateContent({
-    model: "gemini-2.5-pro",
+    // model: "gemini-2.5-pro",
+    model: "gemini-2.0-flash",
     contents,
     config: {
       systemInstruction,

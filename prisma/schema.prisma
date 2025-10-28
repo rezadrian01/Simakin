@@ -59,9 +59,10 @@ model User {
   leaderboards     Leaderboard[]
 
   // aggregated stats for quick queries
-  totalSessions Int   @default(0)
-  totalScore    Float @default(0)
-  streakDays    Int   @default(0)
+  totalSessions    Int       @default(0)
+  totalScore       Float     @default(0)
+  streakDays       Int       @default(0)
+  lastActivityDate DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,6 +76,7 @@ model UserProfile {
   userId        String   @unique
   preferredLang String   @default("id")
   theme         String   @default("light") // light | dark
+  timezone      String   @default("Asia/Jakarta") // User's timezone for streak calculation
   bio           String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

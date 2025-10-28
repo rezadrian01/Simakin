@@ -4,11 +4,15 @@ import { TrendingUp, Calendar, Award, Target } from 'lucide-react'
 import { useLoaderData } from 'react-router'
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
+import { requireUserId } from '~/services/auth/auth.server'
+import { getUserStreak } from '~/services/streak/streak.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
-    // TODO: Get userId from session/auth
-    const userId = "temp-user-id"
+    const userId = await requireUserId(request);
+
+    // Get current streak
+    const streak = await getUserStreak(userId);
 
     // DUMMY DATA - Replace with actual database queries
     return {
@@ -115,7 +119,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             }
         ],
         stats: {
-            streak: 7,
+            streak: streak,
             totalSessions: 23,
             weeklyCount: 5,
             avgAccuracy: 87,
