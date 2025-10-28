@@ -290,12 +290,12 @@ export default function MemorizationPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <Badge
                                                         variant="secondary"
-                                                        className={`mb-2 ${session.mode === 'HAFALAN'
+                                                        className={`mb-2 ${session.mode === 'ZIYADAH'
                                                             ? 'bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300'
                                                             : 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-300'
                                                             }`}
                                                     >
-                                                        {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Murojaah'}
+                                                        {session.mode === 'ZIYADAH' ? 'Ziyadah' : 'Murojaah'}
                                                     </Badge>
                                                     <h3 className="text-xl font-bold text-foreground mb-1 truncate group-hover:text-simakin-primary transition-colors">
                                                         {session.surah}

@@ -182,7 +182,7 @@ model Recitation {
   surah     Int
   startAyah Int
   endAyah   Int
-  mode      RecitationMode   // HAFALAN or MUROJAAH
+  mode      RecitationMode   // ZIYADAH or MUROJAAH
   status    RecitationStatus // COMPLETED
   duration  Int?
   feedback  Feedback?
@@ -395,19 +395,19 @@ Check:
 
 ### ✅ Completed
 
-- [x] Gemini AI system instruction updated for consistent field names
-- [x] Prisma TEXT fields for long content (transcription, generalAdvice)
-- [x] React Router Form pattern (no separate API routes)
-- [x] Arabic font (Amiri) with proper line-height for harakat
-- [x] Truncated text with "Read More" dialog
-- [x] Responsive modal width (95vw → 7xl)
-- [x] Icon-based UI (replaced emoji with Lucide icons)
-- [x] General Advice repositioned to top
-- [x] History page with real database data
-- [x] User stats auto-update (totalSessions, totalScore)
-- [x] Responsive font sizes for mobile/desktop
-- [x] DataTransfer API for file upload in Form
-- [x] useNavigation for loading states
+- [X] Gemini AI system instruction updated for consistent field names
+- [X] Prisma TEXT fields for long content (transcription, generalAdvice)
+- [X] React Router Form pattern (no separate API routes)
+- [X] Arabic font (Amiri) with proper line-height for harakat
+- [X] Truncated text with "Read More" dialog
+- [X] Responsive modal width (95vw → 7xl)
+- [X] Icon-based UI (replaced emoji with Lucide icons)
+- [X] General Advice repositioned to top
+- [X] History page with real database data
+- [X] User stats auto-update (totalSessions, totalScore)
+- [X] Responsive font sizes for mobile/desktop
+- [X] DataTransfer API for file upload in Form
+- [X] useNavigation for loading states
 
 ### 🔄 Future Improvements
 

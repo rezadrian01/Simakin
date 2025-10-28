@@ -66,7 +66,7 @@ export async function loader({ params }: Route.LoaderArgs) {
                 start: recitation.startAyah,
                 end: recitation.endAyah,
             },
-            type: recitation.mode === 'HAFALAN' ? ('ziyadah' as const) : ('murojaah' as const),
+            type: recitation.mode === 'ZIYADAH' ? ('ziyadah' as const) : ('murojaah' as const),
             date: recitation.createdAt.toISOString(),
             duration: recitation.duration || 0,
             score: Math.round(avgScore),

@@ -55,7 +55,7 @@ INSERT INTO Recitation (
   surah,
   startAyah,
   endAyah,
-  mode,        -- 'HAFALAN' or 'MUROJAAH'
+  mode,        -- 'ZIYADAH' or 'MUROJAAH'
   status,      -- 'COMPLETED'
   duration     -- in seconds
 )

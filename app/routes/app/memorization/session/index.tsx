@@ -259,7 +259,7 @@ export async function action({ request }: Route.ActionArgs) {
                     surah: parseInt(surat),
                     startAyah: parseInt(startAyat),
                     endAyah: parseInt(endAyat),
-                    mode: type === "ziyadah" ? "HAFALAN" : "MUROJAAH",
+                    mode: type === "ziyadah" ? "ZIYADAH" : "MUROJAAH",
                     status: "COMPLETED",
                     duration: duration,
                     feedback: {
