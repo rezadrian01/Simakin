@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 
 interface RecentSession {
-    id: number
+    id: string
     surah: string
     accuracy: number
     tajweed: number

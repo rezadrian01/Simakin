@@ -11,6 +11,7 @@ import type { Route } from './+types/index'
 import { requireUserId } from '~/services/auth/auth.server'
 import { db } from '~/lib/db.server'
 import { getUserStreak } from '~/services/streak/streak.server'
+import { calculateExp } from '~/services/exp/exp.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
@@ -30,6 +31,71 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Get current streak (this checks if streak is still valid)
     const currentStreak = await getUserStreak(userId);
 
+    // Fetch recent recitations (last 5 sessions)
+    const recentRecitations = await db.recitation.findMany({
+        where: {
+            userId: userId,
+            status: 'COMPLETED',
+        },
+        include: {
+            feedback: true,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+        take: 5,
+    });
+
+    // Fetch surah names for recent sessions
+    const surahNumbers = [...new Set(recentRecitations.map(r => r.surah))];
+    const surahDataMap = new Map<number, string>();
+
+    await Promise.all(
+        surahNumbers.map(async (surahNum) => {
+            try {
+                const response = await fetch(`https://equran.id/api/v2/surat/${surahNum}`);
+                const data = await response.json();
+                surahDataMap.set(surahNum, data.data?.namaLatin || `Surah ${surahNum}`);
+            } catch (error) {
+                surahDataMap.set(surahNum, `Surah ${surahNum}`);
+            }
+        })
+    );
+
+    // Get historical streak for each session to calculate correct EXP
+    // For simplicity, we'll use current streak for all sessions
+    // In a real scenario, you'd store the streak at the time of the session
+    const recentSessions = recentRecitations
+        .filter(recitation => recitation.feedback !== null)
+        .map(recitation => {
+            // Calculate EXP with the same formula used during session creation
+            const exp = calculateExp({
+                accuracyScore: recitation.feedback!.accuracyScore,
+                tajweedScore: recitation.feedback!.tajweedScore,
+                fluencyScore: recitation.feedback!.fluencyScore,
+                mode: recitation.mode,
+                startAyah: recitation.startAyah,
+                endAyah: recitation.endAyah,
+                streakDays: currentStreak, // Using current streak as approximation
+            });
+
+            const avgScore = Math.round(
+                (recitation.feedback!.accuracyScore +
+                    recitation.feedback!.tajweedScore +
+                    recitation.feedback!.fluencyScore) / 3
+            );
+
+            return {
+                id: recitation.id,
+                surah: surahDataMap.get(recitation.surah) || `Surah ${recitation.surah}`,
+                accuracy: avgScore,
+                tajweed: Math.round(recitation.feedback!.tajweedScore),
+                date: recitation.createdAt.toISOString(),
+                exp: exp,
+                sessionType: recitation.mode.toLowerCase() as 'ziyadah' | 'murojaah',
+            };
+        });
+
     // DUMMY DATA - Replace with actual database queries
     return {
         userStats: {
@@ -44,53 +110,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             weeklyProgress: 6,
             userRank: 15
         },
-        recentSessions: [
-            {
-                id: 1,
-                surah: "Al-Fatihah",
-                accuracy: 95,
-                tajweed: 90,
-                date: new Date().toISOString(),
-                exp: 50,
-                sessionType: "hafalan"
-            },
-            {
-                id: 2,
-                surah: "Al-Ikhlas",
-                accuracy: 88,
-                tajweed: 92,
-                date: new Date(Date.now() - 86400000).toISOString(),
-                exp: 45,
-                sessionType: "murojaah"
-            },
-            {
-                id: 3,
-                surah: "Al-Falaq",
-                accuracy: 82,
-                tajweed: 85,
-                date: new Date(Date.now() - 172800000).toISOString(),
-                exp: 40,
-                sessionType: "hafalan"
-            },
-            {
-                id: 4,
-                surah: "An-Nas",
-                accuracy: 90,
-                tajweed: 88,
-                date: new Date(Date.now() - 259200000).toISOString(),
-                exp: 48,
-                sessionType: "murojaah"
-            },
-            {
-                id: 5,
-                surah: "Al-Baqarah",
-                accuracy: 78,
-                tajweed: 80,
-                date: new Date(Date.now() - 345600000).toISOString(),
-                exp: 38,
-                sessionType: "hafalan"
-            }
-        ],
+        recentSessions: recentSessions,
         quickActions: [
             {
                 title: "Hafalan Baru",

@@ -16,6 +16,7 @@ import {
 import { db } from "~/lib/db.server";
 import { requireUserId } from "~/services/auth/auth.server";
 import { updateUserStreak } from "~/services/streak/streak.server";
+import { calculateExp } from "~/services/exp/exp.server";
 
 // Helper function to handle Gemini API errors
 function handleGeminiError(error: any, step: string): string {
@@ -281,25 +282,31 @@ export async function action({ request }: Route.ActionArgs) {
                 },
             });
 
-            // Update user stats
-            const avgScore =
-                (cleanedMemorizeValidationResult.accuracy_score +
-                    cleanedMemorizeValidationResult.tajweed_score +
-                    cleanedMemorizeValidationResult.fluency_score) /
-                3;
+            // Update streak first (needed for EXP calculation)
+            const newStreak = await updateUserStreak(userId);
+            console.log(`User streak updated to: ${newStreak} days`);
 
-            // Update user stats and streak
+            // Calculate EXP with weighted system
+            const earnedExp = calculateExp({
+                accuracyScore: cleanedMemorizeValidationResult.accuracy_score,
+                tajweedScore: cleanedMemorizeValidationResult.tajweed_score,
+                fluencyScore: cleanedMemorizeValidationResult.fluency_score,
+                mode: type === "ziyadah" ? "ZIYADAH" : "MUROJAAH",
+                startAyah: parseInt(startAyat),
+                endAyah: parseInt(endAyat),
+                streakDays: newStreak,
+            });
+
+            console.log(`EXP earned: ${earnedExp}`);
+
+            // Update user stats
             await db.user.update({
                 where: { id: userId },
                 data: {
                     totalSessions: { increment: 1 },
-                    totalScore: { increment: avgScore },
+                    totalScore: { increment: earnedExp },
                 },
             });
-
-            // Update streak (this handles daily streak logic)
-            const newStreak = await updateUserStreak(userId);
-            console.log(`User streak updated to: ${newStreak} days`);
 
             console.log("Saved to database successfully with ID:", recitation.id);
 
