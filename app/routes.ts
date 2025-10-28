@@ -24,6 +24,9 @@ export default [
     "routes/app/memorization/session/index.tsx"
   ),
 
+  // Onboarding route - NO SIDEBAR (fullscreen focus)
+  route("app/onboarding", "routes/app/onboarding/index.tsx"),
+
   route("app", "routes/app/app-layout.tsx", [
     route("dashboard", "routes/app/dashboard/index.tsx"),
 

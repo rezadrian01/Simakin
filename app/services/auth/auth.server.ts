@@ -33,6 +33,7 @@ const VALID_APP_ROUTES = [
   "/app/leaderboard",
   "/app/memorization",
   "/app/progress-report",
+  "/app/onboarding", // Special route for new users
 ];
 
 // Helper to validate and get safe redirect URL
@@ -79,6 +80,23 @@ export function getSafeRedirectUrl(
 export async function createUserSession(userId: string, redirectTo: string) {
   const session = await sessionStorage.getSession();
   session.set("userId", userId);
+
+  // Check if user has completed onboarding
+  const userProfile = await db.userProfile.findUnique({
+    where: { userId },
+    select: { referralSource: true },
+  });
+
+  // If no referral source, user hasn't completed onboarding
+  if (!userProfile?.referralSource) {
+    // Redirect to onboarding instead
+    return redirect("/app/onboarding", {
+      headers: {
+        "Set-Cookie": await sessionStorage.commitSession(session),
+      },
+    });
+  }
+
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": await sessionStorage.commitSession(session),

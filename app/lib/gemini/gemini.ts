@@ -170,4 +170,86 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
   });
 };
 
-export { modelTranscribeQuran, modelMemorizeValidation };
+// Model to parse page ranges into structured memorization data
+const modelParsePageRanges = (contents: ContentListUnion) => {
+  const systemInstruction = `You are an expert in Qur'an structure and page mapping using Mushaf Rasm Utsmani standard.
+
+  You will receive:
+  - One or more page ranges from the Qur'an that a user has memorized
+  - Format example: "1-301" or "500-604" or multiple ranges like "1-50, 100-150"
+
+  Your task:
+  1. **Convert page ranges to structured surah and ayah ranges**
+  2. Use **Mushaf Rasm Utsmani** as the standard reference for page-to-ayah mapping
+  3. Break down the pages into individual surah segments
+  4. For each segment, provide:
+     - Surah number (1-114)
+     - Starting ayah number
+     - Ending ayah number
+
+  ## Important Rules:
+  - If a page range spans multiple surahs, split them into separate records
+  - Each record should contain only ONE surah (do not mix surahs)
+  - Be precise with ayah numbers based on Mushaf Rasm Utsmani
+  - If a surah is complete within the range, use 1 as start and total ayah count as end
+  - Output must be in JSON array format
+  - BE FAST: This is a time-sensitive operation, prioritize speed while maintaining accuracy
+
+  ## Example Input:
+  "Page 1-10"
+
+  ## Example Output:
+  {
+    "memorizations": [
+      {
+        "surah": 1,
+        "surah_name": "Al-Fatihah",
+        "start_ayah": 1,
+        "end_ayah": 7,
+        "total_ayah": 7,
+        "is_complete": true
+      },
+      {
+        "surah": 2,
+        "surah_name": "Al-Baqarah",
+        "start_ayah": 1,
+        "end_ayah": 74,
+        "total_ayah": 286,
+        "is_complete": false
+      }
+    ],
+    "summary": {
+      "total_surahs": 2,
+      "total_ayahs": 81,
+      "complete_surahs": 1,
+      "partial_surahs": 1,
+      "page_range": "1-10"
+    }
+  }
+
+  ## Output Format:
+  Return ONLY valid JSON with the exact structure shown above. Do not include markdown formatting or additional text.
+
+  ## Field Descriptions:
+  - surah: Surah number (1-114)
+  - surah_name: Arabic/Latin name of the surah
+  - start_ayah: First ayah number in this range
+  - end_ayah: Last ayah number in this range
+  - total_ayah: Total ayahs in the complete surah (for reference)
+  - is_complete: true if entire surah is memorized, false if partial
+
+  Be extremely accurate with page-to-ayah mapping based on Mushaf Rasm Utsmani.
+  `;
+
+  return genAI.models.generateContent({
+    model: "gemini-2.0-flash-exp", // Using experimental model for better performance
+    contents,
+    config: {
+      systemInstruction,
+      responseMimeType: "application/json",
+      temperature: 0.1, // Lower temperature for more consistent/faster results
+    },
+  });
+};
+
+export { modelTranscribeQuran, modelMemorizeValidation, modelParsePageRanges };
