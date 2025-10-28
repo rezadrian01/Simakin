@@ -18,17 +18,22 @@ export default [
     // route("reset-password", "routes/auth/reset-password/index.tsx"),
   ]),
 
+  // Memorization session route - NO SIDEBAR (fullscreen focus)
+  route(
+    "app/memorization/session",
+    "routes/app/memorization/session/index.tsx"
+  ),
+
   route("app", "routes/app/app-layout.tsx", [
     route("dashboard", "routes/app/dashboard/index.tsx"),
 
     ...prefix("memorization", [
       index("routes/app/memorization/index.tsx"),
       route("new", "routes/app/memorization/new/index.tsx"),
-      route("session", "routes/app/memorization/session/index.tsx"),
       route("result/:id", "routes/app/memorization/result/[id]/index.tsx"),
     ]),
     route("progress-report", "routes/app/progress-report/index.tsx"),
     route("game", "routes/app/game/index.tsx"),
-    route("leaderboard",  "routes/app/leaderboard/index.tsx"),
+    route("leaderboard", "routes/app/leaderboard/index.tsx"),
   ]),
 ] satisfies RouteConfig;
