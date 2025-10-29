@@ -72,7 +72,7 @@ enum ReferralSource {
  */
 
 model User {
-  id           String  @id @default(uuid())
+  id           String  @id @default(cuid())
   email        String  @unique
   username     String  @unique
   fullName     String?
@@ -99,7 +99,7 @@ model User {
 }
 
 model UserProfile {
-  id            String          @id @default(uuid())
+  id            String          @id @default(cuid())
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String          @unique
   preferredLang String          @default("id")

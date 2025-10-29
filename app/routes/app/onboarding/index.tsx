@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, useNavigate, useActionData, redirect } from 'react-router';
+import { Form, useActionData, redirect } from 'react-router';
 import type { Route } from './+types/index';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
@@ -13,7 +13,6 @@ import {
     SelectTrigger,
     SelectValue
 } from '~/components/ui/select';
-import { Textarea } from '~/components/ui/textarea';
 import {
     CheckCircle2,
     AlertCircle,
@@ -23,7 +22,10 @@ import {
     Youtube,
     Globe,
     Users,
-    GraduationCap
+    GraduationCap,
+    Plus,
+    Trash2,
+    ArrowRight
 } from 'lucide-react';
 import { requireUserId } from '~/services/auth/auth.server';
 import { saveOnboardingMemorization } from '~/services/memorization/memorization.server';
@@ -46,23 +48,20 @@ const REFERRAL_SOURCES = [
     { value: 'OTHER', label: 'Lainnya', icon: Globe },
 ] as const;
 
+interface PageRange {
+    id: string;
+    startPage: string;
+    endPage: string;
+}
+
 // Action to handle onboarding submission
 export async function action({ request }: Route.ActionArgs) {
-    const actionStartTime = Date.now();
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("🚀 [ACTION] Onboarding form submitted");
-
     const userId = await requireUserId(request);
     const formData = await request.formData();
 
     const referralSource = formData.get('referralSource') as string;
     const referralOther = formData.get('referralOther') as string | null;
     const pageRangesRaw = formData.get('pageRanges') as string;
-
-    console.log("📋 [ACTION] Form data received:");
-    console.log("   - Referral Source:", referralSource);
-    console.log("   - Referral Other:", referralOther);
-    console.log("   - Page Ranges Raw:", pageRangesRaw);
 
     try {
         // Parse page ranges (comma or newline separated)
@@ -71,11 +70,8 @@ export async function action({ request }: Route.ActionArgs) {
             .map(r => r.trim())
             .filter(r => r.length > 0);
 
-        console.log("📄 [ACTION] Parsed page ranges:", pageRanges);
-
         // Validate at least one page range
         if (pageRanges.length === 0) {
-            console.warn("⚠️  [ACTION] Validation failed: No page ranges provided");
             return {
                 success: false,
                 error: 'Silakan masukkan minimal 1 range halaman hafalan Anda',
@@ -84,7 +80,6 @@ export async function action({ request }: Route.ActionArgs) {
 
         // Validate referral source
         if (!referralSource) {
-            console.warn("⚠️  [ACTION] Validation failed: No referral source");
             return {
                 success: false,
                 error: 'Silakan pilih dari mana Anda mengetahui aplikasi ini',
@@ -92,9 +87,6 @@ export async function action({ request }: Route.ActionArgs) {
         }
 
         // Save referral source to user profile
-        console.log("🔄 [ACTION] Saving referral source to UserProfile...");
-        const profileStartTime = Date.now();
-
         await db.userProfile.upsert({
             where: { userId },
             create: {
@@ -108,35 +100,13 @@ export async function action({ request }: Route.ActionArgs) {
             },
         });
 
-        const profileDuration = Date.now() - profileStartTime;
-        console.log(`✅ [ACTION] UserProfile updated in ${profileDuration}ms`);
-
-        // Save memorization data using Gemini AI
-        console.log("🔄 [ACTION] Starting memorization save process...");
-        const memStartTime = Date.now();
-
-        const result = await saveOnboardingMemorization(userId, pageRanges);
-
-        const memDuration = Date.now() - memStartTime;
-        console.log(`✅ [ACTION] Memorization saved in ${memDuration}ms`);
-
-        const totalDuration = Date.now() - actionStartTime;
-        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        console.log("🎉 [ACTION] Onboarding completed successfully!");
-        console.log(`⏱️  [ACTION] Total action time: ${totalDuration}ms`);
-        console.log("🔀 [ACTION] Redirecting to /app/dashboard");
-        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        // Save memorization data
+        await saveOnboardingMemorization(userId, pageRanges);
 
         // Redirect to dashboard on success
         return redirect('/app/dashboard');
     } catch (error: any) {
-        const totalDuration = Date.now() - actionStartTime;
-        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        console.error("❌ [ACTION] Onboarding error occurred");
-        console.error("⏱️  [ACTION] Failed after:", totalDuration, "ms");
-        console.error("📋 [ACTION] Error details:", error);
-        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
+        console.error('[ONBOARD] Error:', error.message);
         return {
             success: false,
             error: error.message || 'Terjadi kesalahan. Silakan coba lagi.',
@@ -164,28 +134,173 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function OnboardingPage() {
     const actionData = useActionData<typeof action>();
-    const navigate = useNavigate();
 
     const [selectedSource, setSelectedSource] = useState('');
+    const [referralOther, setReferralOther] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [pageRanges, setPageRanges] = useState<PageRange[]>([
+        { id: '1', startPage: '', endPage: '' }
+    ]);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    const handleSubmit = () => {
+        setIsSubmitting(true);
+    };
+
+    const addRange = () => {
+        setPageRanges([...pageRanges, {
+            id: Date.now().toString(),
+            startPage: '',
+            endPage: ''
+        }]);
+    };
+
+    const removeRange = (id: string) => {
+        if (pageRanges.length > 1) {
+            setPageRanges(pageRanges.filter(r => r.id !== id));
+            // Clear validation errors for this range
+            const newErrors = { ...validationErrors };
+            delete newErrors[`start-${id}`];
+            delete newErrors[`end-${id}`];
+            setValidationErrors(newErrors);
+        }
+    };
+
+    const updateRange = (id: string, field: 'startPage' | 'endPage', value: string) => {
+        // Only allow numbers
+        if (value && !/^\d*$/.test(value)) return;
+
+        const updatedRanges = pageRanges.map(r =>
+            r.id === id ? { ...r, [field]: value } : r
+        );
+        setPageRanges(updatedRanges);
+
+        // Validate current range
+        validateRange(id, field, value, updatedRanges);
+
+        // Re-validate all other ranges to check for overlaps
+        updatedRanges.forEach(range => {
+            if (range.id !== id && range.startPage && range.endPage) {
+                validateRange(range.id, 'endPage', range.endPage, updatedRanges);
+            }
+        });
+    };
+
+    const validateRange = (
+        id: string,
+        field: 'startPage' | 'endPage',
+        value: string,
+        ranges: PageRange[] = pageRanges
+    ) => {
+        const newErrors = { ...validationErrors };
+        const range = ranges.find(r => r.id === id);
+
+        if (!range) return;
+
+        const num = parseInt(value);
+        const otherField = field === 'startPage' ? 'endPage' : 'startPage';
+        const otherValue = range[otherField];
+
+        // Clear previous errors for this field and overlap errors
+        delete newErrors[`${field === 'startPage' ? 'start' : 'end'}-${id}`];
+        delete newErrors[`overlap-${id}`];
+
+        if (value) {
+            // Validate range (1-604)
+            if (num < 1) {
+                newErrors[`${field === 'startPage' ? 'start' : 'end'}-${id}`] =
+                    'Minimal halaman 1';
+            } else if (num > 604) {
+                newErrors[`${field === 'startPage' ? 'start' : 'end'}-${id}`] =
+                    'Maksimal halaman 604';
+            }
+
+            // Validate start < end
+            if (otherValue) {
+                const otherNum = parseInt(otherValue);
+                if (field === 'startPage' && num > otherNum) {
+                    newErrors[`start-${id}`] = 'Harus lebih kecil dari halaman akhir';
+                } else if (field === 'endPage' && num < parseInt(range.startPage)) {
+                    newErrors[`end-${id}`] = 'Harus lebih besar dari halaman awal';
+                }
+            }
+
+            // Check for overlaps with other ranges
+            if (range.startPage && range.endPage) {
+                const currentStart = parseInt(range.startPage);
+                const currentEnd = parseInt(range.endPage);
+
+                // Only validate if both start and end are valid
+                if (currentStart >= 1 && currentEnd <= 604 && currentStart <= currentEnd) {
+                    ranges.forEach(otherRange => {
+                        if (otherRange.id !== id && otherRange.startPage && otherRange.endPage) {
+                            const otherStart = parseInt(otherRange.startPage);
+                            const otherEnd = parseInt(otherRange.endPage);
+
+                            // Check if ranges overlap
+                            const overlaps =
+                                (currentStart >= otherStart && currentStart <= otherEnd) ||
+                                (currentEnd >= otherStart && currentEnd <= otherEnd) ||
+                                (currentStart <= otherStart && currentEnd >= otherEnd);
+
+                            if (overlaps) {
+                                newErrors[`overlap-${id}`] =
+                                    `Range ini overlap dengan ${otherStart}-${otherEnd}`;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        setValidationErrors(newErrors);
+    };
+
+    // Convert page ranges to form data format
+    const formatPageRanges = () => {
+        return pageRanges
+            .filter(r => r.startPage && r.endPage)
+            .map(r => `${r.startPage}-${r.endPage}`)
+            .join(', ');
+    };
+
+    // Check if there are any filled ranges
+    const hasFilledRanges = pageRanges.some(r => r.startPage || r.endPage);
+
+    // Check if all filled ranges are complete (both start and end filled)
+    const allFilledRangesComplete = pageRanges.every(r => {
+        const hasStart = r.startPage.trim() !== '';
+        const hasEnd = r.endPage.trim() !== '';
+        // If one field is filled, both must be filled
+        if (hasStart || hasEnd) {
+            return hasStart && hasEnd;
+        }
+        return true; // Empty ranges are okay
+    });
+
+    const hasErrors = Object.keys(validationErrors).length > 0;
+
+    // Check if referral source is selected and valid
+    const isReferralSourceValid = selectedSource !== '' &&
+        (selectedSource !== 'OTHER' || referralOther.trim() !== '');
 
     return (
         <div className="min-h-screen bg-linear-to-br from-simakin-primary/5 via-background to-simakin-primary/10 flex items-center justify-center p-4">
             <Card className="w-full max-w-2xl border-2">
                 <CardHeader className="text-center">
                     <div className="flex justify-center mb-4">
-                        <div className="w-16 h-16 bg-simakin-primary rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
                             <BookOpen className="w-8 h-8 text-white" />
                         </div>
                     </div>
-                    <CardTitle className="text-2xl font-bold">Selamat Datang di Simakin! 🎉</CardTitle>
+                    <CardTitle className="text-2xl font-bold">Selamat Datang di Simakin!</CardTitle>
                     <CardDescription className="text-base mt-2">
                         Mari kita setup akun Anda agar pengalaman menghafal Al-Qur'an lebih personal
                     </CardDescription>
                 </CardHeader>
 
                 <CardContent>
-                    <Form method="post" className="space-y-6">
+                    <Form method="post" className="space-y-6" onSubmit={handleSubmit}>
                         {/* Error Alert */}
                         {actionData && !actionData.success && (
                             <Alert variant="destructive">
@@ -196,22 +311,26 @@ export default function OnboardingPage() {
 
                         {/* Section 1: Referral Source */}
                         <div className="space-y-4">
-                            <div className="bg-muted/50 p-4 rounded-lg">
+                            <div className="bg-muted/50 p-4 rounded-lg border-2 border-muted">
                                 <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-simakin-primary" />
+                                    <span>
+                                        <CheckCircle2 className="w-5 h-5 text-simakin-primary" />
+                                    </span>
                                     1. Dari mana Anda mengetahui Simakin?
                                 </h3>
                                 <p className="text-sm text-muted-foreground mb-3">
                                     Informasi ini membantu kami memahami pengguna lebih baik
                                 </p>
 
+                                {/* Hidden input to ensure value is submitted */}
+                                <input type="hidden" name="referralSource" value={selectedSource} />
+
                                 <Select
-                                    name="referralSource"
                                     value={selectedSource}
                                     onValueChange={setSelectedSource}
                                     required
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className='w-full h-12 border-2 bg-background text-base'>
                                         <SelectValue placeholder="Pilih sumber..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -229,12 +348,16 @@ export default function OnboardingPage() {
                                 {/* Show text input if "Lainnya" selected */}
                                 {selectedSource === 'OTHER' && (
                                     <div className="mt-3">
-                                        <Label htmlFor="referralOther">Sebutkan sumbernya</Label>
+                                        <Label htmlFor="referralOther" className="text-sm font-medium">
+                                            Sebutkan sumbernya
+                                        </Label>
                                         <Input
                                             id="referralOther"
                                             name="referralOther"
+                                            value={referralOther}
+                                            onChange={(e) => setReferralOther(e.target.value)}
                                             placeholder="Contoh: WhatsApp Group, Telegram, dll"
-                                            className="mt-1"
+                                            className="mt-2 h-11 border-2 bg-background"
                                             required
                                         />
                                     </div>
@@ -244,62 +367,175 @@ export default function OnboardingPage() {
 
                         {/* Section 2: Existing Memorization */}
                         <div className="space-y-4">
-                            <div className="bg-muted/50 p-4 rounded-lg">
+                            <div className="bg-muted/50 p-4 rounded-lg border-2 border-muted">
                                 <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-simakin-primary" />
+                                    <span>
+                                        <CheckCircle2 className="w-5 h-5 text-simakin-primary" />
+                                    </span>
                                     2. Hafalan Al-Qur'an yang Sudah Anda Miliki
                                 </h3>
-                                <p className="text-sm text-muted-foreground mb-3">
+                                <p className="text-sm text-muted-foreground mb-4">
                                     Masukkan range halaman Al-Qur'an (Mushaf Rasm Utsmani, 604 halaman) yang sudah Anda hafal.
                                     <br />
-                                    <span className="text-simakin-primary font-medium">
-                                        Contoh: 1-301 atau 500-604
+                                    <span className="text-xs italic">
+                                        *Bisa dikosongkan jika belum memiliki hafalan sama sekali
                                     </span>
                                 </p>
 
-                                <Label htmlFor="pageRanges">
-                                    Range Halaman
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                        (Pisahkan dengan koma jika lebih dari 1)
-                                    </span>
-                                </Label>
-                                <Textarea
-                                    id="pageRanges"
-                                    name="pageRanges"
-                                    placeholder="Contoh: 1-301, 500-604"
-                                    rows={3}
-                                    className="mt-1 font-mono"
-                                    required
-                                />
+                                {/* Example Card */}
+                                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 border-2 border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                                            <span className="text-white text-xs font-bold">i</span>
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                                                Contoh Pengisian:
+                                            </p>
+                                            <div className="space-y-1 text-xs text-blue-700 dark:text-blue-300">
+                                                <p>• <strong>Juz 30 (halaman 582-604):</strong> Isi 582 s/d 604</p>
+                                                <p>• <strong>Juz 1-2 (halaman 1-40):</strong> Isi 1 s/d 40</p>
+                                                <p>• <strong>Beberapa halaman terpisah:</strong> Tambahkan range baru untuk setiap segmen</p>
+                                                <p>• <strong>Belum punya hafalan:</strong> Kosongkan saja dan klik "Selesai & Mulai"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
-                                    <p className="text-sm text-blue-800 dark:text-blue-200 flex items-start gap-2">
-                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                        <span>
-                                            <strong>Info:</strong> Kami menggunakan AI untuk mengkonversi range halaman
-                                            menjadi data surah dan ayat. Proses ini memakan waktu beberapa detik.
-                                        </span>
-                                    </p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label>Rentang Halaman yang Sudah Dihafal (Opsional)</Label>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Tambahkan rentang halaman Al-Qur'an yang sudah kamu hafal, atau kosongkan jika belum punya
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {pageRanges.map((range, index) => (
+                                            <div
+                                                key={range.id}
+                                                className="p-4 border-2 border-muted rounded-lg bg-background space-y-3"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-muted-foreground">
+                                                        Range #{index + 1}
+                                                    </span>
+                                                    {pageRanges.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => removeRange(range.id)}
+                                                            className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 mr-1" />
+                                                            Hapus
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`start-${range.id}`} className="text-sm font-semibold">
+                                                            Halaman Awal
+                                                        </Label>
+                                                        <Input
+                                                            id={`start-${range.id}`}
+                                                            type="number"
+                                                            min="1"
+                                                            max="604"
+                                                            value={range.startPage}
+                                                            onChange={(e) => updateRange(range.id, 'startPage', e.target.value)}
+                                                            placeholder="Contoh: 1"
+                                                            className={`h-12 text-base border-2 ${validationErrors[`start-${range.id}`] || validationErrors[`overlap-${range.id}`]
+                                                                ? 'border-red-500 focus-visible:ring-red-500'
+                                                                : 'border-border'
+                                                                }`}
+                                                        />
+                                                        {validationErrors[`start-${range.id}`] && (
+                                                            <p className="text-xs text-red-500 flex items-start gap-1">
+                                                                <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                                                {validationErrors[`start-${range.id}`]}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`end-${range.id}`} className="text-sm font-semibold">
+                                                            Halaman Akhir
+                                                        </Label>
+                                                        <Input
+                                                            id={`end-${range.id}`}
+                                                            type="number"
+                                                            min="1"
+                                                            max="604"
+                                                            value={range.endPage}
+                                                            onChange={(e) => updateRange(range.id, 'endPage', e.target.value)}
+                                                            placeholder="Contoh: 604"
+                                                            className={`h-12 text-base border-2 ${validationErrors[`end-${range.id}`] || validationErrors[`overlap-${range.id}`]
+                                                                ? 'border-red-500 focus-visible:ring-red-500'
+                                                                : 'border-border'
+                                                                }`}
+                                                        />
+                                                        {validationErrors[`end-${range.id}`] && (
+                                                            <p className="text-xs text-red-500 flex items-start gap-1">
+                                                                <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                                                {validationErrors[`end-${range.id}`]}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {validationErrors[`overlap-${range.id}`] && (
+                                                    <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+                                                        <p className="text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                                                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                                            <span className="font-medium">{validationErrors[`overlap-${range.id}`]}</span>
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={addRange}
+                                            className="w-full h-11 border-2"
+                                        >
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Tambah Range Halaman
+                                        </Button>
+                                    </div>
+
+                                    {/* Hidden input to submit formatted ranges */}
+                                    <input
+                                        type="hidden"
+                                        name="pageRanges"
+                                        value={formatPageRanges()}
+                                    />
+
+                                    {/* Incomplete range warning */}
+                                    {hasFilledRanges && !allFilledRangesComplete && (
+                                        <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-200 dark:border-amber-800 rounded-lg">
+                                            <p className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                                <span>
+                                                    <strong>Perhatian:</strong> Jika mengisi salah satu field (Halaman Awal atau Akhir),
+                                                    pastikan kedua field terisi lengkap.
+                                                </span>
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Submit Button */}
-                        <div className="flex gap-3 pt-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => navigate('/app/dashboard')}
-                                className="flex-1"
-                                disabled={isSubmitting}
-                            >
-                                Lewati (Nanti Saja)
-                            </Button>
+                        <div className="flex justify-end pt-4">
                             <Button
                                 type="submit"
-                                className="flex-1"
-                                disabled={isSubmitting}
-                                onClick={() => setIsSubmitting(true)}
+                                className="w-full w-full h-12 text-base"
+                                disabled={isSubmitting || !isReferralSourceValid || !allFilledRangesComplete || hasErrors}
                             >
                                 {isSubmitting ? (
                                     <>
