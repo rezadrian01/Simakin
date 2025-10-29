@@ -18,7 +18,7 @@ This data helps with analytics and personalizes the user experience.
 ✅ **Multiple Page Ranges**: Support for discontinuous page ranges (e.g., "1-201, 542-604")  
 ✅ **Overlap Detection**: Prevents duplicate page ranges  
 ✅ **API-Based Parsing**: Uses AlQuran Cloud API for 100% accuracy  
-✅ **One-Time Only**: Automatic redirect if already completed  
+✅ **One-Time Only**: Automatic redirect if already completed
 
 ## Database Schema
 
@@ -59,9 +59,9 @@ model UserMemorization {
   status      MemorizationStatus  // COMPLETED
   completedAt DateTime?
   createdAt   DateTime @default(now())
-  
+
   user User @relation(fields: [userId], references: [id])
-  
+
   @@unique([userId, surah, startAyah, endAyah])
 }
 ```
@@ -528,10 +528,11 @@ User Input → Parse Ranges → Detect Gaps → API Calls → Build Surah Ranges
 ```typescript
 export async function parsePageRanges(
   pageRanges: string[]
-): Promise<ParsedResult>
+): Promise<ParsedResult>;
 ```
 
 **Flow**:
+
 1. Convert range strings to individual page numbers
 2. Detect discontinuous ranges (gaps)
 3. Route to appropriate parser (continuous vs discontinuous)
@@ -553,6 +554,7 @@ GET https://api.alquran.cloud/v1/surah
 ```
 
 **Optimization**:
+
 - Old approach: 114 sequential requests → Rate limit errors
 - New approach: 3 total requests (2 page + 1 surah batch)
 - Performance: 300-500ms average
@@ -560,10 +562,11 @@ GET https://api.alquran.cloud/v1/surah
 #### 3. Gap Detection
 
 ```typescript
-const hasGaps = allPages.length !== (maxPage - minPage + 1);
+const hasGaps = allPages.length !== maxPage - minPage + 1;
 ```
 
 **Examples**:
+
 - `["1-201"]` → No gaps (continuous)
 - `["1-201", "542-604"]` → Has gaps (discontinuous)
 
@@ -620,6 +623,7 @@ When gaps detected, system splits into segments and processes separately.
 **Input**: `["1-201"]`
 
 **Process**:
+
 1. Pages: [1, 2, 3, ..., 201]
 2. No gaps detected
 3. API calls:
@@ -667,6 +671,7 @@ When gaps detected, system splits into segments and processes separately.
 **Input**: `["1-201", "542-604"]`
 
 **Process**:
+
 1. Pages: [1-201, 542-604]
 2. Gap detected (pages 202-541 missing)
 3. Split into 2 segments:
@@ -676,18 +681,19 @@ When gaps detected, system splits into segments and processes separately.
 5. Merge results
 
 **Output**: 13 surahs total
+
 - Surahs 1-9 (from pages 1-201)
 - Surahs 78-114 (from pages 542-604, Juz 30)
 
 ### Performance Comparison
 
-| Metric    | Old (Gemini AI) | New (API)   | Improvement |
-| --------- | --------------- | ----------- | ----------- |
-| Speed     | 3-8 seconds     | 300-500ms   | **94% faster** |
-| Accuracy  | ~60%            | **100%**    | Perfect     |
-| API Calls | 1 (Gemini)      | 3 (AlQuran) | Optimized   |
-| Cost      | Gemini tokens   | Free API    | **$0 cost** |
-| Reliability | Unreliable    | **Stable**  | Production-ready |
+| Metric      | Old (Gemini AI) | New (API)   | Improvement      |
+| ----------- | --------------- | ----------- | ---------------- |
+| Speed       | 3-8 seconds     | 300-500ms   | **94% faster**   |
+| Accuracy    | ~60%            | **100%**    | Perfect          |
+| API Calls   | 1 (Gemini)      | 3 (AlQuran) | Optimized        |
+| Cost        | Gemini tokens   | Free API    | **$0 cost**      |
+| Reliability | Unreliable      | **Stable**  | Production-ready |
 
 ### Error Handling
 
@@ -699,18 +705,18 @@ try {
     throw new Error(`API error: ${response.status}`);
   }
 } catch (error) {
-  console.error('[PARSE] API error:', error);
-  throw new Error('Failed to fetch page data');
+  console.error("[PARSE] API error:", error);
+  throw new Error("Failed to fetch page data");
 }
 
 // Invalid range format
 if (!/^\d+-\d+$/.test(range)) {
-  throw new Error('Invalid range format. Use: 1-201');
+  throw new Error("Invalid range format. Use: 1-201");
 }
 
 // Out of bounds
 if (pageNum < 1 || pageNum > 604) {
-  throw new Error('Page number must be between 1-604');
+  throw new Error("Page number must be between 1-604");
 }
 ```
 
@@ -825,11 +831,13 @@ expect(result4.memorizations.at(-1).surah).toBe(114); // An-Nas
 ### Limitations & Considerations
 
 **Current Limitations**:
+
 - Requires internet connection
 - Depends on third-party API uptime
 - Fixed to Mushaf Rasm Utsmani (604 pages)
 
 **Future Improvements**:
+
 - [ ] Add offline fallback cache
 - [ ] Support other Mushaf layouts
 - [ ] Juz-level input (e.g., "Juz 1-3")
