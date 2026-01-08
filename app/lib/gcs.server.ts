@@ -143,11 +143,11 @@ export async function getAudioMetadata(gcsUri: string): Promise<{
     const [metadata] = await bucket.file(filePath).getMetadata();
 
     return {
-      size: parseInt(metadata.size || '0'),
+      size: parseInt(String(metadata.size || '0')),
       contentType: metadata.contentType || 'audio/webm',
       createdAt: metadata.timeCreated || new Date().toISOString(),
-      userId: metadata.metadata?.userId,
-      recitationId: metadata.metadata?.recitationId,
+      userId: typeof metadata.metadata?.userId === 'string' ? metadata.metadata.userId : undefined,
+      recitationId: typeof metadata.metadata?.recitationId === 'string' ? metadata.metadata.recitationId : undefined,
     };
   } catch (error) {
     console.error('[GCS] Error getting file metadata:', error);
