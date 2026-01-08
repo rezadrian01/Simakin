@@ -131,6 +131,7 @@ model Recitation {
   mode      RecitationMode
   status    RecitationStatus @default(PENDING)
   duration  Int?
+  audioUrl  String?          // Google Cloud Storage URL for recorded audio
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
