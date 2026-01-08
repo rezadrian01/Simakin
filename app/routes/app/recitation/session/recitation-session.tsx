@@ -278,10 +278,15 @@ const RecitationSession: React.FC<RecitationSessionProps> = ({
                                 disabled={isSubmitting}
                             >
                                 {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                                        Memproses dengan AI...
-                                    </>
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="flex items-center">
+                                            <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                                            <span>Memproses dengan AI...</span>
+                                        </div>
+                                        <span className="text-xs font-normal opacity-80">
+                                            Transkripsi audio → Analisis hafalan & tajwid
+                                        </span>
+                                    </div>
                                 ) : (
                                     <>
                                         <Send className="w-5 h-5 mr-3" />
