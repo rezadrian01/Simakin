@@ -298,6 +298,57 @@ export async function action({ request }: Route.ActionArgs) {
                 },
             });
 
+            // For ZIYADAH sessions, create/link UserMemorization record
+            if (type === "ziyadah") {
+                try {
+                    // Check if memorization record already exists for this exact range
+                    const existingMemorization = await db.userMemorization.findUnique({
+                        where: {
+                            userId_surah_startAyah_endAyah: {
+                                userId: userId,
+                                surah: parseInt(surat),
+                                startAyah: parseInt(startAyat),
+                                endAyah: parseInt(endAyat),
+                            },
+                        },
+                    });
+
+                    if (!existingMemorization) {
+                        // Create new memorization record
+                        const memorization = await db.userMemorization.create({
+                            data: {
+                                userId: userId,
+                                surah: parseInt(surat),
+                                startAyah: parseInt(startAyat),
+                                endAyah: parseInt(endAyat),
+                                status: "COMPLETED",
+                                source: "SIMAKIN",
+                                completedAt: new Date(),
+                            },
+                        });
+
+                        // Link recitation to memorization
+                        await db.recitation.update({
+                            where: { id: recitation.id },
+                            data: { memorizationId: memorization.id },
+                        });
+
+                        console.log(`[ZIYADAH] Created new memorization record: ${memorization.id}`);
+                    } else {
+                        // Just link to existing memorization
+                        await db.recitation.update({
+                            where: { id: recitation.id },
+                            data: { memorizationId: existingMemorization.id },
+                        });
+
+                        console.log(`[ZIYADAH] Linked to existing memorization: ${existingMemorization.id}`);
+                    }
+                } catch (error) {
+                    console.error("[ZIYADAH] Failed to create/link memorization record:", error);
+                    // Continue without linking - not critical for recitation flow
+                }
+            }
+
             // Update streak first (needed for EXP calculation)
             const newStreak = await updateUserStreak(userId);
             console.log(`User streak updated to: ${newStreak} days`);
