@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Link } from 'react-router';
+import { Form, Link, useActionData } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
@@ -8,7 +8,8 @@ import { Input } from '~/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Form as UIForm, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '~/components/ui/form';
 import { Badge } from '~/components/ui/badge';
-import { BookOpen, ArrowLeft } from 'lucide-react';
+import { BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import type { QuranSurah, RecitationType } from '~/routes/app/recitation/types';
 import { RecitationSchema, type RecitationFormValues } from '~/routes/app/recitation/utils/schema';
 
@@ -19,6 +20,7 @@ interface NewRecitationFormProps {
 const NewRecitationForm: React.FC<NewRecitationFormProps> = ({
     quranSurahs,
 }) => {
+    const actionData = useActionData<{ error?: string; suggestion?: string }>();
     const [recitationType, setRecitationType] = useState<RecitationType>('ziyadah');
 
     const defaultSurah = quranSurahs.length > 0 ? quranSurahs[0].nomor.toString() : "";
@@ -71,6 +73,28 @@ const NewRecitationForm: React.FC<NewRecitationFormProps> = ({
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                {/* Error Alert for Overlap Detection */}
+                {actionData?.error && (
+                    <Alert variant="destructive" className="mb-6">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Perhatian!</AlertTitle>
+                        <AlertDescription className="mt-2">
+                            <p>{actionData.error}</p>
+                            {actionData.suggestion === 'murojaah' && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3"
+                                    onClick={() => setRecitationType('murojaah')}
+                                >
+                                    Ganti ke Mode Murojaah
+                                </Button>
+                            )}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
                 <UIForm {...uiform}>
                     <Form method="post" className="space-y-6">
                         {/* Hidden field for type */}
@@ -83,14 +107,14 @@ const NewRecitationForm: React.FC<NewRecitationFormProps> = ({
                                 <Button
                                     type="button"
                                     variant={recitationType === 'ziyadah' ? 'default' : 'outline'}
-                                    onClick={() => setMemorizationType('ziyadah')}
+                                    onClick={() => setRecitationType('ziyadah')}
                                 >
                                     Ziyadah
                                 </Button>
                                 <Button
                                     type="button"
                                     variant={recitationType === 'murojaah' ? 'default' : 'outline'}
-                                    onClick={() => setMemorizationType('murojaah')}
+                                    onClick={() => setRecitationType('murojaah')}
                                 >
                                     Murojaah
                                 </Button>
