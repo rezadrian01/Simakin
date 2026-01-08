@@ -34,7 +34,7 @@ export function AppSidebar() {
         },
         {
             title: "Simak",
-            url: "/app/memorization",
+            url: "/app/recitation",
             icon: <BookOpenText size={35} />,
         },
         {

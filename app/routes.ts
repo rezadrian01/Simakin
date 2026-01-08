@@ -18,10 +18,10 @@ export default [
     // route("reset-password", "routes/auth/reset-password/index.tsx"),
   ]),
 
-  // Memorization session route - NO SIDEBAR (fullscreen focus)
+  // Recitation session route - NO SIDEBAR (fullscreen focus)
   route(
-    "app/memorization/session",
-    "routes/app/memorization/session/index.tsx"
+    "app/recitation/session",
+    "routes/app/recitation/session/index.tsx"
   ),
 
   // Onboarding route - NO SIDEBAR (fullscreen focus)
@@ -30,10 +30,10 @@ export default [
   route("app", "routes/app/app-layout.tsx", [
     route("dashboard", "routes/app/dashboard/index.tsx"),
 
-    ...prefix("memorization", [
-      index("routes/app/memorization/index.tsx"),
-      route("new", "routes/app/memorization/new/index.tsx"),
-      route("result/:id", "routes/app/memorization/result/[id]/index.tsx"),
+    ...prefix("recitation", [
+      index("routes/app/recitation/index.tsx"),
+      route("new", "routes/app/recitation/new/index.tsx"),
+      route("result/:id", "routes/app/recitation/result/[id]/index.tsx"),
     ]),
     route("progress-report", "routes/app/progress-report/index.tsx"),
     route("game", "routes/app/game/index.tsx"),

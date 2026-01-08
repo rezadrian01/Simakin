@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import type { Route } from './+types/index';
-import MemorizationResult from './memorization-result';
+import RecitationResult from './recitation-result';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
@@ -107,7 +107,7 @@ export async function loader({ params }: Route.LoaderArgs) {
     }
 }
 
-export default function MemorizationResultPage({ loaderData }: Route.ComponentProps) {
+export default function RecitationResultPage({ loaderData }: Route.ComponentProps) {
     const navigate = useNavigate();
     const { error, result } = loaderData;
 
@@ -126,7 +126,7 @@ export default function MemorizationResultPage({ loaderData }: Route.ComponentPr
                         <p className="text-muted-foreground">
                             {error || 'Data hasil tidak ditemukan.'}
                         </p>
-                        <Button onClick={() => navigate('/app/memorization')}>
+                        <Button onClick={() => navigate('/app/recitation')}>
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Kembali ke Halaman Memorization
                         </Button>
@@ -136,5 +136,5 @@ export default function MemorizationResultPage({ loaderData }: Route.ComponentPr
         );
     }
 
-    return <MemorizationResult result={result} />;
+    return <RecitationResult result={result} />;
 }

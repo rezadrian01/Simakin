@@ -4,9 +4,9 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Mic, Square, RotateCcw, Send, Loader2, AlertCircle, X, Volume2 } from "lucide-react";
-import type { MemorizationSessionProps } from "~/routes/app/memorization/types";
+import type { RecitationSessionProps } from "~/routes/app/recitation/types";
 
-const MemorizationSession: React.FC<MemorizationSessionProps> = ({
+const RecitationSession: React.FC<RecitationSessionProps> = ({
     surah,
     startAyah,
     endAyah,
@@ -134,7 +134,7 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
                 <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate('/app/memorization')}
+                    onClick={() => navigate('/app/recitation')}
                     disabled={isSubmitting || recording}
                     className="gap-2"
                 >
@@ -308,4 +308,4 @@ const MemorizationSession: React.FC<MemorizationSessionProps> = ({
     );
 };
 
-export default MemorizationSession;
+export default RecitationSession;

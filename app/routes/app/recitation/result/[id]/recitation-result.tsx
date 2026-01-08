@@ -5,10 +5,10 @@ import { Badge } from '~/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog';
 import { Clock, BookOpen, ArrowLeft, Calendar, Target, Award, Zap, AlertCircle, BookMarked, Lightbulb, Maximize2 } from 'lucide-react';
 import { Link } from 'react-router';
-import type { MemorizationResultData } from '~/routes/app/memorization/types';
+import type { RecitationResultData } from '~/routes/app/recitation/types';
 
-interface MemorizationResultProps {
-    result: MemorizationResultData;
+interface RecitationResultProps {
+    result: RecitationResultData;
 }
 
 // Helper component for truncated text with read more
@@ -52,7 +52,7 @@ const TruncatedArabicText: React.FC<{ text: string; title: string; maxLength?: n
     );
 };
 
-const MemorizationResult: React.FC<MemorizationResultProps> = ({ result }) => {
+const RecitationResult: React.FC<RecitationResultProps> = ({ result }) => {
     const getTypeLabel = (type: string) => {
         return type === 'ziyadah' ? 'Ziyadah' : 'Murojaah';
     };
@@ -80,7 +80,7 @@ const MemorizationResult: React.FC<MemorizationResultProps> = ({ result }) => {
         <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Link to="/app/memorization">
+                <Link to="/app/recitation">
                     <Button variant="outline" size="icon">
                         <ArrowLeft className="w-4 h-4" />
                     </Button>
@@ -383,12 +383,12 @@ const MemorizationResult: React.FC<MemorizationResultProps> = ({ result }) => {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-                <Link to="/app/memorization/new" className="flex-1">
+                <Link to="/app/recitation/new" className="flex-1">
                     <Button className="w-full" size="lg">
                         Mulai Sesi Baru
                     </Button>
                 </Link>
-                <Link to="/app/memorization" className="flex-1">
+                <Link to="/app/recitation" className="flex-1">
                     <Button variant="outline" className="w-full" size="lg">
                         Lihat Riwayat
                     </Button>
@@ -398,4 +398,4 @@ const MemorizationResult: React.FC<MemorizationResultProps> = ({ result }) => {
     );
 };
 
-export default MemorizationResult;
+export default RecitationResult;

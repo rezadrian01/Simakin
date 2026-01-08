@@ -1,4 +1,4 @@
-export type MemorizationType = "ziyadah" | "murojaah";
+export type RecitationType = "ziyadah" | "murojaah";
 
 export interface QuranSurah {
   nomor: number;
@@ -9,17 +9,17 @@ export interface QuranSurah {
   arti: string;
 }
 
-export interface MemorizationSessionProps {
+export interface RecitationSessionProps {
   surah: {
     name: string;
     number: number;
   };
   startAyah: string;
   endAyah: string;
-  type: MemorizationType;
+  type: RecitationType;
 }
 
-export interface MemorizationError {
+export interface RecitationError {
   ayah: number;
   type: string;
   detail: string;
@@ -47,7 +47,7 @@ export interface QuranMetadata {
 
 export interface ValidationResult {
   transcription: string;
-  kesalahan_hafalan: MemorizationError[];
+  kesalahan_hafalan: RecitationError[];
   kesalahan_tajwid: TajweedError[];
   kesalahan_waqaf: WaqafError[];
   saran_umum: string;
@@ -69,7 +69,7 @@ export interface ApiResponse {
   details?: string;
 }
 
-export interface MemorizationResultData {
+export interface RecitationResultData {
   id: string;
   surah: {
     name: string;
@@ -79,7 +79,7 @@ export interface MemorizationResultData {
     start: number;
     end: number;
   };
-  type: MemorizationType;
+  type: RecitationType;
   date: string;
   duration?: number;
   score?: number;
@@ -90,7 +90,7 @@ export interface MemorizationResultData {
     tajweed: number;
     waqaf: number;
   };
-  memorizationErrors?: MemorizationError[];
+  memorizationErrors?: RecitationError[];
   tajweedErrors?: TajweedError[];
   waqafErrors?: WaqafError[];
   generalSuggestion?: string;

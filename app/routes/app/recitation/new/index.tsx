@@ -1,7 +1,7 @@
 import React from 'react'
 import { redirect } from 'react-router'
 import type { Route } from './+types/index'
-import NewMemorizationForm from './new-memorization-form'
+import NewRecitationForm from './new-recitation-form'
 import type { QuranSurah } from '../types'
 
 // Loader function to fetch Quran surah list
@@ -46,17 +46,17 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     // Redirect to session page with query params
-    const sessionUrl = `/app/memorization/session?surah=${surah}&start=${start}&end=${end}&type=${type}`
+    const sessionUrl = `/app/recitation/session?surah=${surah}&start=${start}&end=${end}&type=${type}`
 
     return redirect(sessionUrl)
 }
 
-export default function NewMemorizationPage({ loaderData }: Route.ComponentProps) {
+export default function NewRecitationPage({ loaderData }: Route.ComponentProps) {
     const { quranSurahs } = loaderData
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <NewMemorizationForm quranSurahs={quranSurahs} />
+            <NewRecitationForm quranSurahs={quranSurahs} />
         </div>
     )
 }

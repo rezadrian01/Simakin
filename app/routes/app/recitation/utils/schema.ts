@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MemorizationSchema = z
+export const RecitationSchema = z
   .object({
     surah: z.string().min(1, "Surah harus dipilih"),
     start: z.string().min(1, "Ayat mulai harus diisi"),
@@ -18,4 +18,4 @@ export const MemorizationSchema = z
     }
   );
 
-export type MemorizationFormValues = z.infer<typeof MemorizationSchema>;
+export type RecitationFormValues = z.infer<typeof RecitationSchema>;

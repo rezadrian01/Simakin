@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSearchParams, useNavigate, redirect, data } from 'react-router';
 import type { Route } from './+types/index';
-import MemorizationSession from './memorization-session';
+import RecitationSession from './recitation-session';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
@@ -311,7 +311,7 @@ export async function action({ request }: Route.ActionArgs) {
             console.log("Saved to database successfully with ID:", recitation.id);
 
             // Redirect to result page
-            return redirect(`/app/memorization/result/${recitation.id}`);
+            return redirect(`/app/recitation/result/${recitation.id}`);
         } catch (error) {
             console.error("Database error:", error);
             return data(
@@ -338,7 +338,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
 }
 
-export default function MemorizationSessionPage({ loaderData }: Route.ComponentProps) {
+export default function RecitationSessionPage({ loaderData }: Route.ComponentProps) {
     const navigate = useNavigate();
     const { error, surahData } = loaderData;
 
@@ -357,7 +357,7 @@ export default function MemorizationSessionPage({ loaderData }: Route.ComponentP
                         <p className="text-muted-foreground">
                             {error || 'Data sesi tidak ditemukan.'}
                         </p>
-                        <Button onClick={() => navigate('/app/memorization/new')}>
+                        <Button onClick={() => navigate('/app/recitation/new')}>
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Kembali ke Halaman Memorization
                         </Button>
@@ -368,7 +368,7 @@ export default function MemorizationSessionPage({ loaderData }: Route.ComponentP
     }
 
     return (
-        <MemorizationSession
+        <RecitationSession
             surah={surahData.surah}
             startAyah={surahData.startAyah}
             endAyah={surahData.endAyah}

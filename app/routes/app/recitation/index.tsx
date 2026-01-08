@@ -141,7 +141,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 
-export default function MemorizationPage() {
+export default function RecitationPage() {
     const data = useLoaderData<typeof loader>()
     const fetcher = useFetcher<typeof loader>()
     const [allRecitations, setAllRecitations] = useState(data.recentRecitations)
@@ -168,7 +168,7 @@ export default function MemorizationPage() {
                 // If the loader element is visible and we have more data and not currently loading
                 if (first.isIntersecting && hasMore && fetcher.state === 'idle') {
                     const nextPage = currentPage + 1
-                    fetcher.load(`/app/memorization?page=${nextPage}`)
+                    fetcher.load(`/app/recitation?page=${nextPage}`)
                 }
             },
             {
@@ -260,7 +260,7 @@ export default function MemorizationPage() {
 
             {/* CTA Button */}
             <div className="mb-8">
-                <Link to="/app/memorization/new">
+                <Link to="/app/recitation/new">
                     <Button size="lg" className="w-full h-14 text-base">
                         <Plus className="w-5 h-5 mr-2" />
                         Buat Sesi Hafalan Baru
@@ -280,7 +280,7 @@ export default function MemorizationPage() {
                         {allRecitations.map((session) => (
                             <Link
                                 key={session.id}
-                                to={`/app/memorization/result/${session.id}`}
+                                to={`/app/recitation/result/${session.id}`}
                             >
                                 <Card className="group hover:shadow-lg hover:border-simakin-primary/50 transition-all cursor-pointer border-2 h-full overflow-hidden">
                                     <CardContent className="p-0">
@@ -369,7 +369,7 @@ export default function MemorizationPage() {
                             <p className="text-muted-foreground mb-4">
                                 Mulai sesi hafalan pertama Anda sekarang
                             </p>
-                            <Link to="/app/memorization/new">
+                            <Link to="/app/recitation/new">
                                 <Button>
                                     <Plus className="w-4 h-4 mr-2" />
                                     Mulai Sekarang

@@ -31,7 +31,7 @@ const VALID_APP_ROUTES = [
   "/app/dashboard",
   "/app/game",
   "/app/leaderboard",
-  "/app/memorization",
+  "/app/recitation",
   "/app/progress-report",
   "/app/onboarding", // Special route for new users
 ];

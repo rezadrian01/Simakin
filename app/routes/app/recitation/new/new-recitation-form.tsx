@@ -9,23 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { Form as UIForm, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '~/components/ui/form';
 import { Badge } from '~/components/ui/badge';
 import { BookOpen, ArrowLeft } from 'lucide-react';
-import type { QuranSurah, MemorizationType } from '~/routes/app/memorization/types';
-import { MemorizationSchema, type MemorizationFormValues } from '~/routes/app/memorization/utils/schema';
+import type { QuranSurah, RecitationType } from '~/routes/app/recitation/types';
+import { RecitationSchema, type RecitationFormValues } from '~/routes/app/recitation/utils/schema';
 
-interface NewMemorizationFormProps {
+interface NewRecitationFormProps {
     quranSurahs: QuranSurah[];
 }
 
-const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
+const NewRecitationForm: React.FC<NewRecitationFormProps> = ({
     quranSurahs,
 }) => {
-    const [memorizationType, setMemorizationType] = useState<MemorizationType>('ziyadah');
+    const [recitationType, setRecitationType] = useState<RecitationType>('ziyadah');
 
     const defaultSurah = quranSurahs.length > 0 ? quranSurahs[0].nomor.toString() : "";
     const defaultAyat = quranSurahs.length > 0 ? quranSurahs[0].jumlahAyat : 1;
 
-    const uiform = useForm<MemorizationFormValues>({
-        resolver: zodResolver(MemorizationSchema),
+    const uiform = useForm<RecitationFormValues>({
+        resolver: zodResolver(RecitationSchema),
         defaultValues: {
             surah: defaultSurah,
             start: "1",
@@ -74,7 +74,7 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                 <UIForm {...uiform}>
                     <Form method="post" className="space-y-6">
                         {/* Hidden field for type */}
-                        <input type="hidden" name="type" value={memorizationType} />
+                        <input type="hidden" name="type" value={recitationType} />
 
                         {/* Memorization Type Selection */}
                         <div className="space-y-3">
@@ -82,21 +82,21 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                             <div className="flex gap-2">
                                 <Button
                                     type="button"
-                                    variant={memorizationType === 'ziyadah' ? 'default' : 'outline'}
+                                    variant={recitationType === 'ziyadah' ? 'default' : 'outline'}
                                     onClick={() => setMemorizationType('ziyadah')}
                                 >
                                     Ziyadah
                                 </Button>
                                 <Button
                                     type="button"
-                                    variant={memorizationType === 'murojaah' ? 'default' : 'outline'}
+                                    variant={recitationType === 'murojaah' ? 'default' : 'outline'}
                                     onClick={() => setMemorizationType('murojaah')}
                                 >
                                     Murojaah
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                {memorizationType === 'ziyadah'
+                                {recitationType === 'ziyadah'
                                     ? 'Ziyadah: Menambah hafalan baru'
                                     : 'Murojaah: Mengulang hafalan yang sudah ada'
                                 }
@@ -193,7 +193,7 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                     <div className="text-sm text-muted-foreground space-y-1">
                                         <p><span className="font-medium">Surah:</span> {currentSurah.namaLatin} ({currentSurah.nama})</p>
                                         <p><span className="font-medium">Range:</span> Ayat {uiform.watch("start")} - {uiform.watch("end")}</p>
-                                        <p><span className="font-medium">Tipe:</span> {memorizationType === 'ziyadah' ? 'Ziyadah' : 'Murojaah'}</p>
+                                        <p><span className="font-medium">Tipe:</span> {recitationType === 'ziyadah' ? 'Ziyadah' : 'Murojaah'}</p>
                                         <p><span className="font-medium">Total Ayat:</span> {Math.max(0, parseInt(uiform.watch("end") || "1") - parseInt(uiform.watch("start") || "1") + 1)} ayat</p>
                                     </div>
                                 </CardContent>
@@ -208,9 +208,9 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
                                 className="font-semibold py-4 shadow-lg hover:shadow-xl transition-all duration-300"
                             >
                                 <BookOpen className="w-5 h-5 mr-3" />
-                                Mulai Memorization
+                                Mulai Recitation
                             </Button>
-                            <Link to="/app/memorization">
+                            <Link to="/app/recitation">
                                 <Button
                                     type="button"
                                     variant="ghost"
@@ -228,4 +228,4 @@ const NewMemorizationForm: React.FC<NewMemorizationFormProps> = ({
     );
 };
 
-export default NewMemorizationForm;
+export default NewRecitationForm;
