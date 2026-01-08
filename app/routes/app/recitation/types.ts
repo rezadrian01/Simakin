@@ -99,4 +99,5 @@ export interface RecitationResultData {
     tajweed: number;
     fluency: number;
   };
+  audioUrl?: string; // Signed URL for audio playback
 }

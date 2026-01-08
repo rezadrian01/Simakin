@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { db } from '~/lib/db.server';
+import { getSignedAudioUrl } from '~/lib/gcs.server';
 
 // Loader function to fetch memorization result
 export async function loader({ params }: Route.LoaderArgs) {
@@ -56,6 +57,18 @@ export async function loader({ params }: Route.LoaderArgs) {
         const avgScore =
             (feedback.accuracyScore + feedback.tajweedScore + feedback.fluencyScore) / 3;
 
+        // Generate signed URL for audio playback if audio exists
+        let audioPlaybackUrl: string | undefined;
+        if (recitation.audioUrl) {
+            try {
+                audioPlaybackUrl = await getSignedAudioUrl(recitation.audioUrl, 120); // 2 hours expiry
+                console.log("[GCS] Generated signed URL for audio playback");
+            } catch (error) {
+                console.error("[GCS] Failed to generate signed URL:", error);
+                audioPlaybackUrl = undefined;
+            }
+        }
+
         const result = {
             id: recitation.id,
             surah: {
@@ -92,6 +105,7 @@ export async function loader({ params }: Route.LoaderArgs) {
                 tajweed: feedback.tajweedScore,
                 fluency: feedback.fluencyScore,
             },
+            audioUrl: audioPlaybackUrl, // Signed URL for audio playback
         };
 
         return {

@@ -17,6 +17,7 @@ import { db } from "~/lib/db.server";
 import { requireUserId } from "~/services/auth/auth.server";
 import { updateUserStreak } from "~/services/streak/streak.server";
 import { calculateExp } from "~/services/exp/exp.server";
+import { uploadAudioToGCS } from "~/lib/gcs.server";
 
 // Helper function to handle Gemini API errors
 function handleGeminiError(error: any, step: string): string {
@@ -252,6 +253,20 @@ export async function action({ request }: Route.ActionArgs) {
         // Calculate duration from audio file (in seconds)
         const duration = Math.round(audioFile.size / 16000);
 
+        // Upload audio to Google Cloud Storage
+        let audioUrl: string | undefined;
+        try {
+            console.log("[GCS] Starting audio upload...");
+            // Generate a temporary ID for the upload (will be replaced with actual recitation ID)
+            const tempId = `temp-${Date.now()}`;
+            audioUrl = await uploadAudioToGCS(audioFile, userId, tempId);
+            console.log("[GCS] Audio uploaded successfully:", audioUrl);
+        } catch (error) {
+            console.error("[GCS] Audio upload failed:", error);
+            // Continue without audio URL - not a critical failure
+            audioUrl = undefined;
+        }
+
         // Save to database using Prisma
         try {
             const recitation = await db.recitation.create({
@@ -263,6 +278,7 @@ export async function action({ request }: Route.ActionArgs) {
                     mode: type === "ziyadah" ? "ZIYADAH" : "MUROJAAH",
                     status: "COMPLETED",
                     duration: duration,
+                    audioUrl: audioUrl, // Store GCS URI
                     feedback: {
                         create: {
                             transcription: cleanedTranscribedAudio,

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '~/components/ui/dialog';
-import { Clock, BookOpen, ArrowLeft, Calendar, Target, Award, Zap, AlertCircle, BookMarked, Lightbulb, Maximize2 } from 'lucide-react';
+import { Clock, BookOpen, ArrowLeft, Calendar, Target, Award, Zap, AlertCircle, BookMarked, Lightbulb, Maximize2, Volume2 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { RecitationResultData } from '~/routes/app/recitation/types';
 
@@ -148,6 +148,31 @@ const RecitationResult: React.FC<RecitationResultProps> = ({ result }) => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Audio Playback */}
+            {result.audioUrl && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Volume2 className="w-4 h-4" />
+                            Rekaman Bacaan Anda
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <audio
+                            controls
+                            src={result.audioUrl}
+                            className="w-full"
+                            preload="metadata"
+                        >
+                            Browser Anda tidak mendukung pemutar audio.
+                        </audio>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            💡 Dengarkan kembali bacaan Anda untuk evaluasi mandiri
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Detailed Scores from AI */}
             {result.scores && (
