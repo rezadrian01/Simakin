@@ -242,7 +242,21 @@ const RecitationSession: React.FC<RecitationSessionProps> = ({
                         <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription className="ml-2">
-                                {error}
+                                <p className="font-medium mb-2">{error}</p>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setError(null)}
+                                        className="bg-background"
+                                    >
+                                        Tutup & Coba Lagi
+                                    </Button>
+                                    <span className="text-xs opacity-80">
+                                        Audio Anda masih tersimpan
+                                    </span>
+                                </div>
                             </AlertDescription>
                         </Alert>
                     )}
