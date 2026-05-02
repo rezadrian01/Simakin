@@ -4,11 +4,15 @@ import { TrendingUp, Calendar, Award, Target } from 'lucide-react'
 import { useLoaderData } from 'react-router'
 import { formatDateToIndonesian } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
+import { requireUserId } from '~/services/auth/auth.server'
+import { getUserStreak } from '~/services/streak/streak.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
-    // TODO: Get userId from session/auth
-    const userId = "temp-user-id"
+    const userId = await requireUserId(request);
+
+    // Get current streak
+    const streak = await getUserStreak(userId);
 
     // DUMMY DATA - Replace with actual database queries
     return {
@@ -16,7 +20,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "1",
                 surah: "Al-Fatihah",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date().toISOString(),
                 accuracy: 95,
                 tajweed: 90,
@@ -36,7 +40,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "3",
                 surah: "Al-Baqarah",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date(Date.now() - 172800000).toISOString(),
                 accuracy: 82,
                 tajweed: 85,
@@ -56,7 +60,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "5",
                 surah: "Al-Falaq",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date(Date.now() - 345600000).toISOString(),
                 accuracy: 78,
                 tajweed: 80,
@@ -66,7 +70,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "6",
                 surah: "Al-Mulk",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date(Date.now() - 432000000).toISOString(),
                 accuracy: 85,
                 tajweed: 87,
@@ -86,7 +90,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "8",
                 surah: "Ar-Rahman",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date(Date.now() - 604800000).toISOString(),
                 accuracy: 87,
                 tajweed: 89,
@@ -106,7 +110,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             {
                 id: "10",
                 surah: "Al-Kahf",
-                mode: "HAFALAN" as const,
+                mode: "ZIYADAH" as const,
                 date: new Date(Date.now() - 777600000).toISOString(),
                 accuracy: 84,
                 tajweed: 86,
@@ -115,7 +119,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             }
         ],
         stats: {
-            streak: 7,
+            streak: streak,
             totalSessions: 23,
             weeklyCount: 5,
             avgAccuracy: 87,
@@ -199,11 +203,11 @@ export default function ProgressReportPage() {
                                             <h3 className="font-semibold text-foreground">
                                                 {session.surah}
                                             </h3>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${session.mode === 'HAFALAN'
+                                            <span className={`text-xs px-2 py-1 rounded-full ${session.mode === 'ZIYADAH'
                                                 ? 'bg-blue-100 text-blue-700'
                                                 : 'bg-green-100 text-green-700'
                                                 }`}>
-                                                {session.mode === 'HAFALAN' ? 'Ziyadah' : 'Muroja\'ah'}
+                                                {session.mode === 'ZIYADAH' ? 'Ziyadah' : 'Muroja\'ah'}
                                             </span>
                                         </div>
                                         <p className="text-sm text-muted-foreground">

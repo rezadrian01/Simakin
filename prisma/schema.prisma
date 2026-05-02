@@ -27,7 +27,7 @@ enum Role {
 
 enum RecitationMode {
   MUROJAAH
-  HAFALAN
+  ZIYADAH
 }
 
 enum RecitationStatus {
@@ -37,6 +37,34 @@ enum RecitationStatus {
   FAILED
 }
 
+enum MemorizationStatus {
+  PLANNED      // User plans to memorize this
+  IN_PROGRESS  // Currently working on it
+  COMPLETED    // Finished memorizing
+}
+
+enum MemorizationSource {
+  SIMAKIN      // Memorized through the app (via recitation)
+  ONBOARDING   // Existing memorization from onboarding
+  MANUAL       // Added manually by user
+}
+
+enum ReferralSource {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  FACEBOOK
+  TWITTER
+  WEBSITE
+  GOOGLE_SEARCH
+  FRIEND
+  FAMILY
+  TEACHER
+  MOSQUE
+  SCHOOL
+  OTHER
+}
+
 /**
  * ================================
  * USER MODELS
@@ -44,7 +72,7 @@ enum RecitationStatus {
  */
 
 model User {
-  id           String  @id @default(uuid())
+  id           String  @id @default(cuid())
   email        String  @unique
   username     String  @unique
   fullName     String?
@@ -59,9 +87,10 @@ model User {
   leaderboards     Leaderboard[]
 
   // aggregated stats for quick queries
-  totalSessions Int   @default(0)
-  totalScore    Float @default(0)
-  streakDays    Int   @default(0)
+  totalSessions    Int       @default(0)
+  totalScore       Float     @default(0)
+  streakDays       Int       @default(0)
+  lastActivityDate DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,12 +99,18 @@ model User {
 }
 
 model UserProfile {
-  id            String   @id @default(uuid())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String   @unique
-  preferredLang String   @default("id")
-  theme         String   @default("light") // light | dark
+  id            String          @id @default(cuid())
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String          @unique
+  preferredLang String          @default("id")
+  theme         String          @default("light") // light | dark
+  timezone      String          @default("Asia/Jakarta") // User's timezone for streak calculation
   bio           String?
+  
+  // Onboarding data
+  referralSource ReferralSource? // How user found the app
+  referralOther  String?         // Custom text if source is OTHER
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -96,21 +131,30 @@ model Recitation {
   mode      RecitationMode
   status    RecitationStatus @default(PENDING)
   duration  Int?
+  audioUrl  String?          // Google Cloud Storage URL for recorded audio
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   feedback Feedback?
+  
+  // Link to memorization record (for ziyadah sessions)
+  memorizationId String?
+  memorization   UserMemorization? @relation(fields: [memorizationId], references: [id])
+  
+  @@index([userId])
+  @@index([userId, mode])
+  @@index([createdAt])
 }
 
 model Feedback {
   id               String     @id @default(cuid())
   recitationId     String     @unique
   recitation       Recitation @relation(fields: [recitationId], references: [id])
-  transcription    String?
+  transcription    String?    @db.Text
   memorizationErrs Json?
   tajweedErrs      Json?
   waqfErrs         Json?
-  generalAdvice    String?
+  generalAdvice    String?    @db.Text
   accuracyScore    Float
   tajweedScore     Float
   fluencyScore     Float
@@ -119,21 +163,31 @@ model Feedback {
 }
 
 model UserMemorization {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  juzNumber  Int
-  surahStart Int
-  surahEnd   Int
-  ayahStart  Int
-  ayahEnd    Int
-  verified   Boolean  @default(false)
-  completion Float    @default(0) // 0–100%
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([userId, juzNumber])
-  @@index([userId])
+  id        String              @id @default(cuid())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  // Surah and ayah range
+  surah     Int                 // Surah number (1-114)
+  startAyah Int                 // Starting ayah number
+  endAyah   Int                 // Ending ayah number
+  
+  // Status tracking
+  status    MemorizationStatus  @default(COMPLETED)
+  source    MemorizationSource  @default(SIMAKIN)
+  
+  // Metadata
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relation to recitations (ziyadah sessions that created this memorization)
+  recitations Recitation[]
+  
+  @@unique([userId, surah, startAyah, endAyah]) // Prevent duplicate ranges
+  @@index([userId, status])
+  @@index([userId, surah])
+  @@index([userId, source])
 }
 
 /**

@@ -4,8 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-arabic: "Amiri", "Traditional Arabic", "Scheherazade New", serif;
 }
 
 html,
@@ -62,16 +64,16 @@ body {
   --shadow-color: hsl(0 0% 0%);
   --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 2px 4px -1px hsl(0 0% 0% / 0.1);
-  --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 4px 6px -1px hsl(0 0% 0% / 0.1);
-  --shadow-xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-sm:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
@@ -122,16 +124,16 @@ body {
   --shadow-color: hsl(0 0% 0%);
   --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 2px 4px -1px hsl(0 0% 0% / 0.1);
-  --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 4px 6px -1px hsl(0 0% 0% / 0.1);
-  --shadow-xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.1),
-    0px 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-sm:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl:
+    0px 1px 3px 0px hsl(0 0% 0% / 0.1), 0px 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
@@ -195,4 +197,70 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Landing Page Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-fade-in-left {
+  animation: fade-in-left 0.6s ease-out forwards;
+}
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, currentColor 1px, transparent 1px),
+    linear-gradient(to bottom, currentColor 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Arabic text styling - only apply to Arabic characters */
+.arabic-text {
+  font-family: var(--font-arabic);
+  font-size: 1.5rem;
+  line-height: 2.5;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+.arabic-text-lg {
+  font-family: var(--font-arabic);
+  font-size: 2rem;
+  line-height: 3;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+.arabic-text-sm {
+  font-family: var(--font-arabic);
+  font-size: 1.125rem;
+  line-height: 2.25;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
 }

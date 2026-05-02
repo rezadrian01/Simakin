@@ -53,11 +53,11 @@ const modelTranscribeQuran = {
 
 // Model to validate memorization and tajweed
 const modelMemorizeValidation = (contents: ContentListUnion) => {
-  const systemInstruction = `You are a strict and detailed Qur’an memorization evaluator and tajweed expert.
+  const systemInstruction = `You are a strict and detailed Qur'an memorization evaluator and tajweed expert.
 
   You will receive:
   1. Surah name and ayah range
-  2. The original Qur’an text in Arabic (ground truth)
+  2. The original Qur'an text in Arabic (ground truth)
   3. A transcription of the user's recitation (from audio)
   4. Metadata: audio file for verification
 
@@ -81,28 +81,28 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
   #### 1. **Nun Sukun & Tanwin**
   - **Idzhar Halqi** (Clear) → Example: "مِنْ عِلْمٍ"
   - **Idgham Bighunnah** (Merge + nasal) → Example: "مِنْ وَرَائِهِمْ"
-  - **Idgham Bilaghunnah** (Merge w/o nasal) → Example: "مِنْ رَبِّهِمْ"
+  - **Idgham Bilaghunnah** (Merge w/o nasal) → Example: "مِنْ رَبِّهِمْ"
   - **Iqlab** (Convert to meem + nasal before ب) → Example: "مِن بَعْدِ"
-  - **Ikhfa’** (Hidden nasal) → Example: "مِنْ صَدْرِهِمْ"
+  - **Ikhfa'** (Hidden nasal) → Example: "مِنْ صَدْرِهِمْ"
 
   #### 2. **Mim Sukun**
-  - **Ikhfa’ Syafawi** → Example: "تَرْمِيهِمْ بِحِجَارَةٍ"
-  - **Idgham Mimi** → Example: "فَهُمْ مُّفْلِحُونَ"
+  - **Ikhfa' Syafawi** → Example: "تَرْمِيهِمْ بِحِجَارَةٍ"
+  - **Idgham Mimi** → Example: "فَهُمْ مُّفْلِحُونَ"
   - **Idzhar Syafawi** → Example: "عَلَيْهِمْ دَائِرَةٌ"
 
-  #### 3. **Lam Al-Ta’rif (Alif Lam Rules)**
-  - **Idgham Syamsiyah** → Example: "الشَّمْسُ" → "ash-shams"
+  #### 3. **Lam Al-Ta'rif (Alif Lam Rules)**
+  - **Idgham Syamsiyah** → Example: "الشَّمْسُ" → "ash-shams"
   - **Idzhar Qamariyah** → Example: "الْقَمَرُ"
 
   #### 4. **Madd (Prolongation)**
-  - **Mad Thabi’i** (2 counts) → Example: "قَالَ"
+  - **Mad Thabi'i** (2 counts) → Example: "قَالَ"
   - **Mad Wajib Muttashil** (4–5 counts) → Example: "جَاءَ"
-  - **Mad Jaiz Munfashil** (2–5 counts) → Example: "إِنَّا أَعْطَيْنَاكَ"
+  - **Mad Jaiz Munfashil** (2–5 counts) → Example: "إِنَّا أَعْطَيْنَاكَ"
   - **Mad Aridh Lissukun** (2/4/6 counts) → Example: "نَسْتَعِينُ"
-  - **Mad Lazim** (6 counts) → Example: "الصَّاخَّةُ"
+  - **Mad Lazim** (6 counts) → Example: "الصَّاخَّةُ"
 
   #### 5. **Ghunnah**
-  - Nasal 2 counts → Example: "ثُمَّ", "يُنْفِقُونَ"
+  - Nasal 2 counts → Example: "ثُمَّ", "يُنْفِقُونَ"
 
   #### 6. **Qalqalah**
   - **Sughra** → Example: "يَقْطَعُ"
@@ -118,21 +118,32 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
       - Does it change the meaning?  
       - If it risks altering meaning, mark it as a mistake.
 
-  5. **Output JSON in Indonesian**, with this structure:
+  5. **Calculate Scores (0-100)**:
+    - **accuracy_score**: Based on memorization accuracy (how correct the words and letters are compared to ground truth). 
+      Perfect recitation = 100, minor mistakes = 80-95, major mistakes = below 80.
+    - **tajweed_score**: Based on tajweed rules application (nun sukun, mim sukun, madd, qalqalah, etc.). 
+      All rules applied correctly = 100, minor errors = 80-95, major errors = below 80.
+    - **fluency_score**: Based on smoothness, pace, hesitation, and overall recitation flow. 
+      Very smooth and confident = 100, some hesitation = 80-95, many pauses/struggles = below 80.
+
+  6. **Output JSON in Indonesian**, with this exact structure (use English field names):
 
   {
     "transcription": "Tulis ulang transkrip bacaan user di sini",
     "kesalahan_hafalan": [
-      {"ayat": 2, "jenis": "lafal salah", "detail": "kata 'raiba' dibaca 'roiba'"},
-      {"ayat": 3, "jenis": "ayat kurang", "detail": "bagian akhir ayat belum dibaca"}
+      {"ayah": 2, "type": "lafal salah", "detail": "kata 'raiba' dibaca 'roiba'"},
+      {"ayah": 3, "type": "ayat kurang", "detail": "bagian akhir ayat belum dibaca"}
     ],
     "kesalahan_tajwid": [
-      {"ayat": 2, "jenis": "mad thabi’i terlalu pendek", "huruf": "لا", "saran": "panjangkan 2 harakat"}
+      {"ayah": 2, "type": "mad thabi'i terlalu pendek", "letter": "لا", "suggestion": "panjangkan 2 harakat"}
     ],
     "kesalahan_waqaf": [
-      {"ayat": 2, "jenis": "waqaf tidak sesuai mushaf", "detail": "berhenti di tengah kalimat, berpotensi mengubah arti"}
+      {"ayah": 2, "type": "waqaf tidak sesuai mushaf", "detail": "berhenti di tengah kalimat, berpotensi mengubah arti"}
     ],
-    "saran_umum": "Perhatikan idgham bighunnah, mad thabi’i, dan waqaf agar bacaan lebih sempurna.",
+    "saran_umum": "Perhatikan idgham bighunnah, mad thabi'i, dan waqaf agar bacaan lebih sempurna.",
+    "accuracy_score": 85.5,
+    "tajweed_score": 78.0,
+    "fluency_score": 90.0,
     "metadata_quran": {
       "surah": "Al-Baqarah",
       "ayat_dari": 1,
@@ -140,10 +151,18 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
       "jumlah_ayat": 5
     }
   }
+  
+  IMPORTANT: Use exact field names as shown:
+  - "ayah" (not "ayat")
+  - "type" (not "jenis")
+  - "letter" (not "huruf")
+  - "suggestion" (not "saran")
+  
   Return only JSON, no additional commentary.
   `;
   return genAI.models.generateContent({
-    model: "gemini-2.5-pro",
+    // model: "gemini-2.5-pro",
+    model: "gemini-2.0-flash",
     contents,
     config: {
       systemInstruction,
@@ -151,4 +170,86 @@ const modelMemorizeValidation = (contents: ContentListUnion) => {
   });
 };
 
-export { modelTranscribeQuran, modelMemorizeValidation };
+// Model to parse page ranges into structured memorization data
+const modelParsePageRanges = (contents: ContentListUnion) => {
+  const systemInstruction = `You are an expert in Qur'an structure and page mapping using Mushaf Rasm Utsmani standard.
+
+  You will receive:
+  - One or more page ranges from the Qur'an that a user has memorized
+  - Format example: "1-301" or "500-604" or multiple ranges like "1-50, 100-150"
+
+  Your task:
+  1. **Convert page ranges to structured surah and ayah ranges**
+  2. Use **Mushaf Rasm Utsmani** as the standard reference for page-to-ayah mapping
+  3. Break down the pages into individual surah segments
+  4. For each segment, provide:
+     - Surah number (1-114)
+     - Starting ayah number
+     - Ending ayah number
+
+  ## Important Rules:
+  - If a page range spans multiple surahs, split them into separate records
+  - Each record should contain only ONE surah (do not mix surahs)
+  - Be precise with ayah numbers based on Mushaf Rasm Utsmani
+  - If a surah is complete within the range, use 1 as start and total ayah count as end
+  - Output must be in JSON array format
+  - BE FAST: This is a time-sensitive operation, prioritize speed while maintaining accuracy
+
+  ## Example Input:
+  "Page 1-10"
+
+  ## Example Output:
+  {
+    "memorizations": [
+      {
+        "surah": 1,
+        "surah_name": "Al-Fatihah",
+        "start_ayah": 1,
+        "end_ayah": 7,
+        "total_ayah": 7,
+        "is_complete": true
+      },
+      {
+        "surah": 2,
+        "surah_name": "Al-Baqarah",
+        "start_ayah": 1,
+        "end_ayah": 74,
+        "total_ayah": 286,
+        "is_complete": false
+      }
+    ],
+    "summary": {
+      "total_surahs": 2,
+      "total_ayahs": 81,
+      "complete_surahs": 1,
+      "partial_surahs": 1,
+      "page_range": "1-10"
+    }
+  }
+
+  ## Output Format:
+  Return ONLY valid JSON with the exact structure shown above. Do not include markdown formatting or additional text.
+
+  ## Field Descriptions:
+  - surah: Surah number (1-114)
+  - surah_name: Arabic/Latin name of the surah
+  - start_ayah: First ayah number in this range
+  - end_ayah: Last ayah number in this range
+  - total_ayah: Total ayahs in the complete surah (for reference)
+  - is_complete: true if entire surah is memorized, false if partial
+
+  Be extremely accurate with page-to-ayah mapping based on Mushaf Rasm Utsmani.
+  `;
+
+  return genAI.models.generateContent({
+    model: "gemini-2.0-flash-exp", // Using experimental model for better performance
+    contents,
+    config: {
+      systemInstruction,
+      responseMimeType: "application/json",
+      temperature: 0.1, // Lower temperature for more consistent/faster results
+    },
+  });
+};
+
+export { modelTranscribeQuran, modelMemorizeValidation, modelParsePageRanges };

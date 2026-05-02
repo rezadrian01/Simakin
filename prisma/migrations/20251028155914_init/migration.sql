@@ -10,6 +10,7 @@ CREATE TABLE `User` (
     `totalSessions` INTEGER NOT NULL DEFAULT 0,
     `totalScore` DOUBLE NOT NULL DEFAULT 0,
     `streakDays` INTEGER NOT NULL DEFAULT 0,
+    `lastActivityDate` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -25,7 +26,10 @@ CREATE TABLE `UserProfile` (
     `userId` VARCHAR(191) NOT NULL,
     `preferredLang` VARCHAR(191) NOT NULL DEFAULT 'id',
     `theme` VARCHAR(191) NOT NULL DEFAULT 'light',
+    `timezone` VARCHAR(191) NOT NULL DEFAULT 'Asia/Jakarta',
     `bio` VARCHAR(191) NULL,
+    `referralSource` ENUM('INSTAGRAM', 'TIKTOK', 'YOUTUBE', 'FACEBOOK', 'TWITTER', 'WEBSITE', 'GOOGLE_SEARCH', 'FRIEND', 'FAMILY', 'TEACHER', 'MOSQUE', 'SCHOOL', 'OTHER') NULL,
+    `referralOther` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -40,12 +44,16 @@ CREATE TABLE `Recitation` (
     `surah` INTEGER NOT NULL,
     `startAyah` INTEGER NOT NULL,
     `endAyah` INTEGER NOT NULL,
-    `mode` ENUM('MUROJAAH', 'HAFALAN') NOT NULL,
+    `mode` ENUM('MUROJAAH', 'ZIYADAH') NOT NULL,
     `status` ENUM('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'PENDING',
     `duration` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `memorizationId` VARCHAR(191) NULL,
 
+    INDEX `Recitation_userId_idx`(`userId`),
+    INDEX `Recitation_userId_mode_idx`(`userId`, `mode`),
+    INDEX `Recitation_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -53,11 +61,11 @@ CREATE TABLE `Recitation` (
 CREATE TABLE `Feedback` (
     `id` VARCHAR(191) NOT NULL,
     `recitationId` VARCHAR(191) NOT NULL,
-    `transcription` VARCHAR(191) NULL,
+    `transcription` TEXT NULL,
     `memorizationErrs` JSON NULL,
     `tajweedErrs` JSON NULL,
     `waqfErrs` JSON NULL,
-    `generalAdvice` VARCHAR(191) NULL,
+    `generalAdvice` TEXT NULL,
     `accuracyScore` DOUBLE NOT NULL,
     `tajweedScore` DOUBLE NOT NULL,
     `fluencyScore` DOUBLE NOT NULL,
@@ -72,18 +80,19 @@ CREATE TABLE `Feedback` (
 CREATE TABLE `UserMemorization` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
-    `juzNumber` INTEGER NOT NULL,
-    `surahStart` INTEGER NOT NULL,
-    `surahEnd` INTEGER NOT NULL,
-    `ayahStart` INTEGER NOT NULL,
-    `ayahEnd` INTEGER NOT NULL,
-    `verified` BOOLEAN NOT NULL DEFAULT false,
-    `completion` DOUBLE NOT NULL DEFAULT 0,
+    `surah` INTEGER NOT NULL,
+    `startAyah` INTEGER NOT NULL,
+    `endAyah` INTEGER NOT NULL,
+    `status` ENUM('PLANNED', 'IN_PROGRESS', 'COMPLETED') NOT NULL DEFAULT 'COMPLETED',
+    `source` ENUM('SIMAKIN', 'ONBOARDING', 'MANUAL') NOT NULL DEFAULT 'SIMAKIN',
+    `completedAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    INDEX `UserMemorization_userId_idx`(`userId`),
-    UNIQUE INDEX `UserMemorization_userId_juzNumber_key`(`userId`, `juzNumber`),
+    INDEX `UserMemorization_userId_status_idx`(`userId`, `status`),
+    INDEX `UserMemorization_userId_surah_idx`(`userId`, `surah`),
+    INDEX `UserMemorization_userId_source_idx`(`userId`, `source`),
+    UNIQUE INDEX `UserMemorization_userId_surah_startAyah_endAyah_key`(`userId`, `surah`, `startAyah`, `endAyah`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -134,6 +143,9 @@ ALTER TABLE `UserProfile` ADD CONSTRAINT `UserProfile_userId_fkey` FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE `Recitation` ADD CONSTRAINT `Recitation_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Recitation` ADD CONSTRAINT `Recitation_memorizationId_fkey` FOREIGN KEY (`memorizationId`) REFERENCES `UserMemorization`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Feedback` ADD CONSTRAINT `Feedback_recitationId_fkey` FOREIGN KEY (`recitationId`) REFERENCES `Recitation`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
