@@ -18,6 +18,7 @@ import { requireUserId } from "~/services/auth/auth.server";
 import { updateUserStreak } from "~/services/streak/streak.server";
 import { calculateExp } from "~/services/exp/exp.server";
 import { uploadAudioToGCS } from "~/lib/gcs.server";
+import { logXPGain } from "~/services/xp-history/xp-history.server";
 
 // Helper function to handle Gemini API errors
 function handleGeminiError(error: any, step: string): string {
@@ -366,13 +367,19 @@ export async function action({ request }: Route.ActionArgs) {
 
             console.log(`EXP earned: ${earnedExp}`);
 
-            // Update user stats
+            // Store expEarned on the recitation record
+            await db.recitation.update({
+                where: { id: recitation.id },
+                data: { expEarned: earnedExp },
+            });
+
+            // Log XP gain and update user totalScore via transaction
+            await logXPGain(userId, earnedExp, "RECITATION", recitation.id);
+
+            // Increment session count separately
             await db.user.update({
                 where: { id: userId },
-                data: {
-                    totalSessions: { increment: 1 },
-                    totalScore: { increment: earnedExp },
-                },
+                data: { totalSessions: { increment: 1 } },
             });
 
             console.log("Saved to database successfully with ID:", recitation.id);

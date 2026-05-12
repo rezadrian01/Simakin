@@ -1,4 +1,3 @@
-import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { BookOpenText, Trophy, Flame, Play } from 'lucide-react'
 import { Button } from '~/components/ui/button'
@@ -11,7 +10,6 @@ import type { Route } from './+types/index'
 import { requireUserId } from '~/services/auth/auth.server'
 import { db } from '~/lib/db.server'
 import { getUserStreak } from '~/services/streak/streak.server'
-import { calculateExp } from '~/services/exp/exp.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
@@ -63,22 +61,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     );
 
     // Get historical streak for each session to calculate correct EXP
-    // For simplicity, we'll use current streak for all sessions
-    // In a real scenario, you'd store the streak at the time of the session
     const recentSessions = recentRecitations
         .filter(recitation => recitation.feedback !== null)
         .map(recitation => {
-            // Calculate EXP with the same formula used during session creation
-            const exp = calculateExp({
-                accuracyScore: recitation.feedback!.accuracyScore,
-                tajweedScore: recitation.feedback!.tajweedScore,
-                fluencyScore: recitation.feedback!.fluencyScore,
-                mode: recitation.mode,
-                startAyah: recitation.startAyah,
-                endAyah: recitation.endAyah,
-                streakDays: currentStreak, // Using current streak as approximation
-            });
-
             const avgScore = Math.round(
                 (recitation.feedback!.accuracyScore +
                     recitation.feedback!.tajweedScore +
@@ -91,7 +76,7 @@ export async function loader({ request }: Route.LoaderArgs) {
                 accuracy: avgScore,
                 tajweed: Math.round(recitation.feedback!.tajweedScore),
                 date: recitation.createdAt.toISOString(),
-                exp: exp,
+                exp: recitation.expEarned,
                 sessionType: recitation.mode.toLowerCase() as 'ziyadah' | 'murojaah',
             };
         });
