@@ -65,6 +65,29 @@ enum ReferralSource {
   OTHER
 }
 
+// ============================================
+// GAMIFICATION ENUMS
+// ============================================
+
+enum XPSource {
+  RECITATION
+  MINIGAME
+  DAILY_CHALLENGE
+}
+
+enum GameType {
+  SAMBUNG_AYAT
+  TEBAK_SURAH
+  LENGKAPI_AYAT
+  URUTAN_AYAT
+}
+
+enum ChallengeType {
+  COMPLETE_SESSIONS
+  REACH_ACCURACY
+  WIN_GAMES
+}
+
 /**
  * ================================
  * USER MODELS
@@ -85,6 +108,9 @@ model User {
   userAchievements UserAchievement[]
   memorization     UserMemorization[]
   leaderboards     Leaderboard[]
+  xpHistory        XPHistory[]
+  gameSessions     GameSession[]
+  dailyChallenges  UserDailyChallenge[]
 
   // aggregated stats for quick queries
   totalSessions    Int       @default(0)
@@ -132,6 +158,7 @@ model Recitation {
   status    RecitationStatus @default(PENDING)
   duration  Int?
   audioUrl  String?          // Google Cloud Storage URL for recorded audio
+  expEarned Int              @default(0)  // EXP earned at session time (captures correct streak)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
@@ -241,4 +268,73 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([userId])
+}
+
+// ============================================
+// XP HISTORY (GAMIFICATION)
+// ============================================
+
+model XPHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  source    XPSource
+  sourceId  String?  // recitationId, gameSessionId, or userDailyChallengeId
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, source])
+}
+
+// ============================================
+// GAME SESSION (GAMIFICATION)
+// ============================================
+
+model GameSession {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameType       GameType
+  totalQuestions Int      // Always 10
+  correctAnswers Int
+  expEarned      Int
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, gameType])
+  @@index([userId, createdAt])
+}
+
+// ============================================
+// DAILY CHALLENGES (GAMIFICATION)
+// ============================================
+
+model DailyChallenge {
+  id          String        @id @default(cuid())
+  type        ChallengeType
+  targetValue Int           // e.g. 3 for sessions, 90 for accuracy, 2 for games
+  expReward   Int
+  description String
+
+  userProgress UserDailyChallenge[]
+
+  @@unique([type])
+}
+
+model UserDailyChallenge {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId     String
+  challenge       DailyChallenge @relation(fields: [challengeId], references: [id])
+  date            String         // "YYYY-MM-DD" in user's local timezone
+  currentProgress Int            @default(0)
+  isCompleted     Boolean        @default(false)
+  completedAt     DateTime?
+  expAwarded      Boolean        @default(false)
+
+  @@unique([userId, challengeId, date])
+  @@index([userId, date])
 }
