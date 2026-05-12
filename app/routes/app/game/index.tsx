@@ -5,6 +5,8 @@ import { Link, useLoaderData } from 'react-router'
 import type { Route } from './+types/index'
 import { requireUserId } from '~/services/auth/auth.server'
 import { getUserStreak } from '~/services/streak/streak.server'
+import { getTodaysChallenges } from '~/services/daily-challenge/daily-challenge.server'
+import { db } from '~/lib/db.server'
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
@@ -13,11 +15,32 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Get current streak
     const streak = await getUserStreak(userId);
 
-    // DUMMY DATA - Replace with actual database queries
+    // Get user stats
+    const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { totalScore: true },
+    });
+
+    // Get achievement count
+    const totalAchievements = await db.userAchievement.count({
+        where: { userId },
+    });
+
+    // Get user timezone for daily challenges
+    const profile = await db.userProfile.findUnique({
+        where: { userId },
+        select: { timezone: true },
+    });
+    const timezone = profile?.timezone ?? "Asia/Jakarta";
+
+    // Get today's challenge progress
+    const challenges = await getTodaysChallenges(userId, timezone);
+
     return {
-        totalAchievements: 8,
-        totalScore: 1450,
-        streak: streak
+        totalScore: user?.totalScore ?? 0,
+        totalAchievements,
+        streak,
+        challenges,
     }
 }
 
@@ -26,36 +49,36 @@ export default function GamePage() {
 
     const games = [
         {
-            title: "Tebak Ayat",
-            description: "Tebak ayat Al-Qur'an dari petunjuk yang diberikan",
+            title: "Tebak Surah",
+            description: "Tebak surah dari ayat yang ditampilkan",
             icon: Brain,
-            color: "bg-purple-500",
-            href: "/app/game/guess-ayat",
-            difficulty: "Medium"
-        },
-        {
-            title: "Quiz Hafalan",
-            description: "Uji hafalan Anda dengan kuis interaktif",
-            icon: Puzzle,
             color: "bg-blue-500",
-            href: "/app/game/quiz",
+            href: "/app/game/tebak-surah",
             difficulty: "Easy"
         },
         {
-            title: "Speed Challenge",
-            description: "Seberapa cepat Anda bisa menghafal?",
-            icon: Zap,
-            color: "bg-yellow-500",
-            href: "/app/game/speed-challenge",
-            difficulty: "Hard"
+            title: "Sambung Ayat",
+            description: "Lanjutkan ayat berikut dengan ayat yang tepat",
+            icon: Puzzle,
+            color: "bg-purple-500",
+            href: "/app/game/sambung-ayat",
+            difficulty: "Medium"
         },
         {
-            title: "Tajweed Master",
-            description: "Latihan tajweed dengan game yang menyenangkan",
+            title: "Urutan Ayat",
+            description: "Pilih ayat yang berasal dari posisi pertama",
+            icon: Zap,
+            color: "bg-yellow-500",
+            href: "/app/game/urutan-ayat",
+            difficulty: "Medium"
+        },
+        {
+            title: "Lengkapi Ayat",
+            description: "Isi kata yang hilang dalam ayat",
             icon: Target,
             color: "bg-green-500",
-            href: "/app/game/tajweed-master",
-            difficulty: "Medium"
+            href: "/app/game/lengkapi-ayat",
+            difficulty: "Hard"
         }
     ]
 
@@ -152,51 +175,26 @@ export default function GamePage() {
                         <Zap className="w-6 h-6 text-simakin-primary" />
                         Tantangan Harian
                     </CardTitle>
-                    <CardDescription>Selesaikan tantangan untuk bonus poin!</CardDescription>
+                    <CardDescription>Selesaikan tantangan untuk bonus EXP!</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                            <div>
-                                <h3 className="font-semibold text-foreground text-sm mb-1">
-                                    Selesaikan 3 Sesi Hafalan
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Progress: 0/3 sesi
-                                </p>
+                        {data.challenges.map((challenge) => (
+                            <div key={challenge.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                                <div>
+                                    <h3 className="font-semibold text-foreground text-sm mb-1">
+                                        {challenge.description}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        Progress: {challenge.currentProgress}/{challenge.targetValue}{' '}
+                                        {challenge.isCompleted && <span className="text-green-600 font-medium">✓ Selesai</span>}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-lg font-bold text-simakin-primary">+{challenge.expReward} EXP</p>
+                                </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-lg font-bold text-simakin-primary">+100 XP</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                            <div>
-                                <h3 className="font-semibold text-foreground text-sm mb-1">
-                                    Raih Skor Akurasi 90%
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Dalam satu sesi hafalan
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-lg font-bold text-simakin-primary">+150 XP</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                            <div>
-                                <h3 className="font-semibold text-foreground text-sm mb-1">
-                                    Menangkan 2 Game
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Progress: 0/2 game
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-lg font-bold text-simakin-primary">+200 XP</p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>

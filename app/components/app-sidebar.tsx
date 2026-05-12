@@ -17,7 +17,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from "~/components/ui/dropdown-menu"
-import { BookOpenText, ChevronUp, Gamepad2, Home, TrendingUpDown, Trophy, User2 } from "lucide-react"
+import { BookOpenText, ChevronUp, Gamepad2, Home, TrendingUpDown, Trophy, User2, Award } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import { APP_NAME } from "~/lib/constant"
 import { Form } from "react-router"
@@ -46,6 +46,11 @@ export function AppSidebar() {
             title: "Game",
             url: "/app/game",
             icon: <Gamepad2 size={35} />,
+        },
+        {
+            title: "Pencapaian",
+            url: "/app/achievements",
+            icon: <Award size={35} />,
         },
         {
             title: "Peringkat",

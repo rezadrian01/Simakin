@@ -19,6 +19,8 @@ import { updateUserStreak } from "~/services/streak/streak.server";
 import { calculateExp } from "~/services/exp/exp.server";
 import { uploadAudioToGCS } from "~/lib/gcs.server";
 import { logXPGain } from "~/services/xp-history/xp-history.server";
+import { incrementChallengeProgress } from "~/services/daily-challenge/daily-challenge.server";
+import { checkAndAwardAchievements } from "~/services/achievement/achievement.server";
 
 // Helper function to handle Gemini API errors
 function handleGeminiError(error: any, step: string): string {
@@ -380,6 +382,32 @@ export async function action({ request }: Route.ActionArgs) {
             await db.user.update({
                 where: { id: userId },
                 data: { totalSessions: { increment: 1 } },
+            });
+
+            // Increment COMPLETE_SESSIONS daily challenge
+            const profile = await db.userProfile.findUnique({
+                where: { userId },
+                select: { timezone: true },
+            });
+            const timezone = profile?.timezone ?? "Asia/Jakarta";
+            await incrementChallengeProgress(userId, timezone, "COMPLETE_SESSIONS");
+
+            // Check REACH_ACCURACY challenge
+            if (cleanedMemorizeValidationResult.accuracy_score >= 90) {
+                await incrementChallengeProgress(userId, timezone, "REACH_ACCURACY");
+            }
+
+            // Check achievement triggers
+            const updatedUser = await db.user.findUnique({
+                where: { id: userId },
+                select: { totalSessions: true, streakDays: true, totalScore: true },
+            });
+
+            await checkAndAwardAchievements(userId, {
+                totalSessions: updatedUser?.totalSessions,
+                streakDays: updatedUser?.streakDays,
+                totalScore: updatedUser?.totalScore,
+                lastAccuracyScore: cleanedMemorizeValidationResult.accuracy_score,
             });
 
             console.log("Saved to database successfully with ID:", recitation.id);

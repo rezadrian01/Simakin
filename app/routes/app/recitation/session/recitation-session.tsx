@@ -243,7 +243,7 @@ const RecitationSession: React.FC<RecitationSessionProps> = ({
                                 </p>
                             </div>
                         ) : (
-                            /* Audio Player Card - Enhanced */}
+                            /* Audio Player Card - Enhanced */
                             <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <Card className="shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm overflow-hidden">
                                     {/* Success Badge */}
