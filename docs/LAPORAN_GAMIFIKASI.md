@@ -192,31 +192,38 @@ Progress setiap tantangan ditampilkan dengan **progress bar** pada halaman Game.
 
 ## 5. Pencapaian (Achievement)
 
-Achievement adalah penghargaan yang diberikan kepada pengguna ketika mereka mencapai milestone tertentu. Achievement bersifat permanen — sekali diraih, tidak akan hilang. Pengguna dapat melihat semua achievement (yang sudah diraih maupun yang belum) di halaman Pencapaian.
+Achievement adalah penghargaan yang diberikan kepada pengguna ketika mereka mencapai milestone tertentu. Achievement bersifat permanen — sekali diraih, tidak akan hilang. Pengguna dapat melihat semua achievement (yang sudah diraih maupun yang belum) di halaman Pencapaian. Terdapat **14 achievement** yang bisa dikumpulkan.
+
+![Halaman Pencapaian](<../public/images/game/pencapaian.png>)
 
 ### Daftar Achievement
 
 | Achievement | Kondisi |
 |---|---|
-| **Langkah Pertama** | Menyelesaikan sesi hafalan pertama |
-| **Gamer Pemula** | Menyelesaikan sesi minigame pertama |
-| **Rajin Berlatih** | Menyelesaikan 10 sesi hafalan |
-| **Hafiz Berdedikasi** | Menyelesaikan 50 sesi hafalan |
-| **Pejuang Game** | Menyelesaikan 10 sesi minigame |
-| **Jago Game** | Menang dalam 10 sesi minigame |
-| **Sempurna!** | Menjawab semua 10 soal dengan benar dalam satu sesi game |
-| **Streak Pemula** | Mempertahankan streak 7 hari berturut-turut |
-| **Streak Master** | Mempertahankan streak 30 hari berturut-turut |
-| **Kolektor Skor** | Mengumpulkan total skor 1.000 poin |
-| **Sultan EXP** | Mengumpulkan total skor 10.000 poin |
+| **Langkah Pertama** | Selesaikan sesi hafalan pertamamu |
+| **Gamer Quran** | Mainkan minigame pertamamu |
+| **Rajin Berlatih** | Selesaikan 10 sesi hafalan |
+| **Hafizh Sejati** | Selesaikan 50 sesi hafalan |
+| **Suka Bermain** | Menangkan 10 ronde minigame |
+| **Sempurna!** | Raih skor akurasi 100 dalam satu sesi hafalan |
+| **Jawaban Sempurna** | Jawab 10/10 benar dalam satu ronde minigame |
+| **Konsisten** | Raih akurasi ≥ 90% sebanyak 5 kali |
+| **3 Hari Berturut-turut** | Pertahankan streak 3 hari |
+| **Hafizh Mingguan** | Pertahankan streak 7 hari |
+| **Hafizh Sebulan** | Pertahankan streak 30 hari |
+| **Konsisten Harian** | Selesaikan semua tantangan harian 3 hari berturut-turut |
+| **Naik Level** | Kumpulkan total 1.000 EXP |
+| **Master Hafizh** | Kumpulkan total 10.000 EXP |
 
-Achievement yang belum diraih ditampilkan dalam kondisi terkunci, sehingga pengguna mengetahui target apa yang perlu dicapai.
+Achievement yang belum diraih ditampilkan dalam kondisi terkunci, sehingga pengguna mengetahui target apa yang perlu dicapai. Achievement yang sudah terbuka ditandai dengan latar kuning dan label **"✓ Terbuka"** beserta tanggal pencapaiannya.
 
 ---
 
 ## 6. Papan Peringkat (Leaderboard)
 
 Papan peringkat memperlihatkan peringkat pengguna dibandingkan pengguna lain, sehingga mendorong kompetisi sehat di antara sesama pengguna Simakin.
+
+![Halaman Leaderboard](<../public/images/game/leaderboard.png>)
 
 ### Dua Mode Tampilan
 
@@ -225,7 +232,7 @@ Papan peringkat memperlihatkan peringkat pengguna dibandingkan pengguna lain, se
 | **Global** | Peringkat berdasarkan total skor akumulatif sepanjang masa |
 | **Mingguan** | Peringkat berdasarkan EXP yang dikumpulkan dalam 7 hari terakhir |
 
-Peringkat 1–3 teratas mendapatkan tampilan khusus (medal emas, perak, perunggu). Pengguna yang sedang login selalu dapat melihat posisi peringkatnya sendiri meskipun tidak masuk dalam 10 besar.
+Pengguna yang sedang login selalu dapat melihat **peringkat globalnya sendiri** di bagian atas halaman beserta total skornya, meskipun tidak masuk dalam daftar 50 besar. Peringkat 1–3 teratas mendapatkan tampilan khusus berupa ikon mahkota emas, perak, dan perunggu. Setiap entri juga menampilkan **streak** pengguna tersebut sebagai informasi tambahan.
 
 ---
 
