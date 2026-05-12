@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Trophy, Lock } from 'lucide-react'
+import { Trophy } from 'lucide-react'
 import { useLoaderData } from 'react-router'
 import type { Route } from './+types/index'
 import { requireUserId } from '~/services/auth/auth.server'
@@ -43,7 +43,7 @@ export default function AchievementsPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Pencapaian</h1>
                     <p className="text-muted-foreground">
-                        {earnedCount} / {totalCount} achievement解锁
+                        {earnedCount} / {totalCount} achievement terbuka
                     </p>
                 </div>
             </div>
@@ -66,7 +66,7 @@ export default function AchievementsPage() {
                                 </div>
                                 {achievement.earned && (
                                     <span className="text-xs text-green-600 font-medium">
-                                        ✓ TerUnlock
+                                        ✓ Terbuka
                                     </span>
                                 )}
                             </div>
@@ -80,7 +80,7 @@ export default function AchievementsPage() {
                             </p>
                             {achievement.earned && achievement.awardedAt && (
                                 <p className="text-xs text-muted-foreground">
-                                    解锁于 {new Date(achievement.awardedAt).toLocaleDateString('id-ID')}
+                                    Diraih pada {new Date(achievement.awardedAt).toLocaleDateString('id-ID')}
                                 </p>
                             )}
                         </CardContent>

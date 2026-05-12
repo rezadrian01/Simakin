@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLoaderData, useNavigate } from "react-router";
+import { useLoaderData, useNavigate, useFetcher } from "react-router";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -10,6 +10,7 @@ import type { Route } from "./+types/index";
 import { requireUserId } from "~/services/auth/auth.server";
 import { generateQuestions } from "~/services/game/game.server";
 import { logXPGain } from "~/services/xp-history/xp-history.server";
+import { updateUserStreak } from "~/services/streak/streak.server";
 import { incrementChallengeProgress } from "~/services/daily-challenge/daily-challenge.server";
 import { checkAndAwardAchievements } from "~/services/achievement/achievement.server";
 import { db } from "~/lib/db.server";
@@ -66,6 +67,7 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   await logXPGain(userId, expEarned, "MINIGAME", gameSession.id);
+  await updateUserStreak(userId);
 
   if (isWin) {
     const profile = await db.userProfile.findUnique({
@@ -85,19 +87,20 @@ export async function action({ request }: Route.ActionArgs) {
     select: { totalScore: true },
   });
 
-  const newAchievements = await checkAndAwardAchievements(userId, {
+  await checkAndAwardAchievements(userId, {
     totalGameSessions,
     totalGameWins,
     totalScore: updatedUser?.totalScore ?? 0,
     lastGameCorrect: correctAnswers,
   });
 
-  return { correctAnswers, expEarned, isWin, gameSessionId: gameSession.id, newAchievements };
+  return { correctAnswers, expEarned, isWin };
 }
 
 export default function UrutanAyatPage() {
   const { questions } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const fetcher = useFetcher<typeof action>();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -107,28 +110,38 @@ export default function UrutanAyatPage() {
     new Array(questions.length).fill(null)
   );
   const [showResult, setShowResult] = useState(false);
-  const [resultData, setResultData] = useState<{
-    correctAnswers: number;
-    expEarned: number;
-    isWin: boolean;
-  } | null>(null);
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      setShowResult(true);
+    }
+  }, [fetcher.state, fetcher.data]);
 
   const currentQuestion = questions[currentIndex];
 
   useEffect(() => {
     if (isAnswered || showResult) return;
     if (timer <= 0) {
-      if (!isAnswered) {
-        const newAnswers = [...answers];
-        newAnswers[currentIndex] = -1;
-        setAnswers(newAnswers);
-        setIsAnswered(true);
-      }
+      const newAnswers = [...answers];
+      newAnswers[currentIndex] = -1;
+      setAnswers(newAnswers);
+      setIsAnswered(true);
+      setTimeout(() => {
+        if (currentIndex < questions.length - 1) {
+          setCurrentIndex((i) => i + 1);
+          setSelectedAnswer(null);
+          setIsAnswered(false);
+          setTimer(TIME_PER_QUESTION);
+        } else {
+          submitAnswers(newAnswers);
+        }
+      }, 800);
       return;
     }
     const interval = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(interval);
-  }, [timer, isAnswered, showResult]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timer, isAnswered, showResult, currentIndex]);
 
   const handleSelect = async (optionIndex: number) => {
     if (isAnswered) return;
@@ -150,31 +163,21 @@ export default function UrutanAyatPage() {
     }
   };
 
-  const submitAnswers = async (finalAnswers: (number | null)[]) => {
+  const submitAnswers = (finalAnswers: (number | null)[]) => {
     const formData = new FormData();
     formData.set("answers", JSON.stringify(finalAnswers));
     formData.set("questions", JSON.stringify(questions));
-    try {
-      const res = await fetch(`/app/game/urutan-ayat`, {
-        method: "POST",
-        body: formData,
-      });
-      const resData = await res.json();
-      setResultData(resData);
-      setShowResult(true);
-    } catch (e) {
-      console.error(e);
-    }
+    fetcher.submit(formData, { method: "POST" });
   };
 
-  if (showResult && resultData) {
+  if (showResult && fetcher.data) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <RoundResult
-          correctAnswers={resultData.correctAnswers}
+          correctAnswers={fetcher.data.correctAnswers}
           totalQuestions={QUESTIONS_PER_ROUND}
-          expEarned={resultData.expEarned}
-          isWin={resultData.isWin}
+          expEarned={fetcher.data.expEarned}
+          isWin={fetcher.data.isWin}
           gameType="urutan-ayat"
         />
       </div>
@@ -207,7 +210,7 @@ export default function UrutanAyatPage() {
             </p>
 
             <div className="grid grid-cols-1 gap-3">
-              {currentQuestion.options.map((option, idx) => {
+              {currentQuestion.options.map((option: { text: string; ayahNumber: number }, idx: number) => {
                 let state: "idle" | "correct" | "wrong" | "selected" = "idle";
                 if (isAnswered) {
                   if (idx === currentQuestion.correctIndex) state = "correct";

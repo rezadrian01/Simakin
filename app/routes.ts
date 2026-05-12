@@ -36,7 +36,8 @@ export default [
       route("result/:id", "routes/app/recitation/result/[id]/index.tsx"),
     ]),
     route("progress-report", "routes/app/progress-report/index.tsx"),
-    route("game", "routes/app/game/index.tsx", [
+    route("game", "routes/app/game/index.tsx"),
+    ...prefix("game", [
       route("tebak-surah", "routes/app/game/tebak-surah/index.tsx"),
       route("sambung-ayat", "routes/app/game/sambung-ayat/index.tsx"),
       route("urutan-ayat", "routes/app/game/urutan-ayat/index.tsx"),

@@ -18,9 +18,9 @@ async function main() {
     },
     {
       type: ChallengeType.REACH_ACCURACY,
-      targetValue: 90,
+      targetValue: 1,
       expReward: 150,
-      description: "Raih Skor Akurasi 90% dalam satu sesi",
+      description: "Raih Skor Akurasi ≥ 90% dalam satu sesi",
     },
     {
       type: ChallengeType.WIN_GAMES,

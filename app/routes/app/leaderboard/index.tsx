@@ -1,59 +1,118 @@
-import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Trophy, Medal, Award, Crown } from 'lucide-react'
 import { useLoaderData } from 'react-router'
 import { formatNumber } from '~/utils/indonesian-utils'
 import type { Route } from './+types/index'
+import { requireUserId } from '~/services/auth/auth.server'
+import { db } from '~/lib/db.server'
+
+// Helper to get start of week (Monday) in a given timezone
+function getStartOfWeek(timezone: string = "Asia/Jakarta"): Date {
+    const now = new Date()
+    // Get the date in the target timezone
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    })
+    const parts = formatter.formatToParts(now)
+    const getPart = (type: string) => parseInt(parts.find(p => p.type === type)?.value || "1")
+
+    const year = getPart("year")
+    const month = getPart("month")
+    const day = getPart("day")
+
+    const localDate = new Date(year, month - 1, day)
+    const dayOfWeek = localDate.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    localDate.setDate(localDate.getDate() - daysToMonday)
+
+    // Start of day in local timezone
+    localDate.setHours(0, 0, 0, 0)
+
+    // Convert back to UTC for database query
+    const utcDate = new Date(localDate.toLocaleString("en-US", { timeZone: timezone }))
+    return utcDate
+}
 
 // Loader function to fetch data from database
 export async function loader({ request }: Route.LoaderArgs) {
-    // TODO: Get userId from session/auth
-    const userId = "temp-user-id"
+    const userId = await requireUserId(request)
+    const timezone = "Asia/Jakarta" // Default, could be fetched from user profile
 
-    // DUMMY DATA - Replace with actual database queries
-    const dummyUsers = [
-        { username: "ahmad_hafidz", fullName: "Ahmad Hafidz", score: 2450, streak: 15 },
-        { username: "fatimah_zahra", fullName: "Fatimah Zahra", score: 2380, streak: 12 },
-        { username: "umar_faruq", fullName: "Umar Faruq", score: 2310, streak: 18 },
-        { username: "aisyah_siddiq", fullName: "Aisyah Siddiq", score: 2200, streak: 10 },
-        { username: "ali_murtadha", fullName: "Ali Murtadha", score: 2150, streak: 14 },
-        { username: "khadijah_binti", fullName: "Khadijah Binti", score: 2080, streak: 9 },
-        { username: "salman_farisi", fullName: "Salman Farisi", score: 1990, streak: 11 },
-        { username: "hafshah_ummi", fullName: "Hafshah Ummi", score: 1920, streak: 8 },
-        { username: "bilal_habsyi", fullName: "Bilal Habsyi", score: 1850, streak: 13 },
-        { username: "zaynab_maryam", fullName: "Zaynab Maryam", score: 1780, streak: 7 },
-        { username: "abdullah_ibn", fullName: "Abdullah Ibn", score: 1720, streak: 10 },
-        { username: "ruqayyah_nur", fullName: "Ruqayyah Nur", score: 1650, streak: 6 },
-        { username: "hasan_basri", fullName: "Hasan Basri", score: 1580, streak: 9 },
-        { username: "zainab_fathia", fullName: "Zainab Fathia", score: 1510, streak: 5 },
-        { username: "ibrahim_khalil", fullName: "Ibrahim Khalil", score: 1450, streak: 8 },
-        { username: "maryam_azizah", fullName: "Maryam Azizah", score: 1390, streak: 7 },
-        { username: "yusuf_qardhawi", fullName: "Yusuf Qardhawi", score: 1320, streak: 6 },
-        { username: "sofia_rabbani", fullName: "Sofia Rabbani", score: 1250, streak: 5 },
-        { username: "hamzah_asad", fullName: "Hamzah Asad", score: 1180, streak: 4 },
-        { username: "laila_munira", fullName: "Laila Munira", score: 1110, streak: 3 }
-    ]
+    // Get current user's data for rank
+    const currentUser = await db.user.findUnique({
+        where: { id: userId },
+        select: { username: true, totalScore: true, streakDays: true },
+    })
+
+    // Get top 50 users by totalScore (global leaderboard)
+    const globalTop = await db.user.findMany({
+        where: { totalScore: { gt: 0 } },
+        orderBy: { totalScore: "desc" },
+        take: 50,
+        select: {
+            username: true,
+            fullName: true,
+            totalScore: true,
+            streakDays: true,
+        },
+    })
+
+    // Find current user's rank
+    const userRank = await db.user.count({
+        where: { totalScore: { gt: currentUser?.totalScore ?? 0 } },
+    })
+
+    // Weekly leaderboard: sum XP gains since start of week
+    const startOfWeek = getStartOfWeek(timezone)
+
+    const weeklyXP = await db.xPHistory.groupBy({
+        by: ["userId"],
+        where: {
+            createdAt: { gte: startOfWeek },
+        },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: "desc" } },
+        take: 10,
+    })
+
+    // Fetch usernames for weekly leaders
+    const weeklyUserIds = weeklyXP.map(w => w.userId)
+    const weeklyUsers = await db.user.findMany({
+        where: { id: { in: weeklyUserIds } },
+        select: { id: true, username: true, fullName: true },
+    })
+    const weeklyUserMap = new Map(weeklyUsers.map(u => [u.id, u]))
+
+    const weeklyLeaderboard = weeklyXP.map((entry, index) => {
+        const user = weeklyUserMap.get(entry.userId)
+        return {
+            rank: index + 1,
+            username: user?.username ?? "unknown",
+            fullName: user?.fullName ?? user?.username ?? "Unknown",
+            score: entry._sum.amount ?? 0,
+            isCurrentUser: entry.userId === userId,
+        }
+    })
+
+    const globalLeaderboard = globalTop.map((user, index) => ({
+        rank: index + 1,
+        username: user.username,
+        fullName: user.fullName ?? user.username,
+        score: user.totalScore,
+        streak: user.streakDays,
+        isCurrentUser: user.username === currentUser?.username,
+    }))
 
     return {
-        globalLeaderboard: dummyUsers.map((user, index) => ({
-            rank: index + 1,
-            username: user.username,
-            fullName: user.fullName,
-            score: user.score,
-            streak: user.streak,
-            isCurrentUser: index === 14 // User is at rank 15
-        })),
-        weeklyLeaderboard: dummyUsers.slice(0, 10).map((user, index) => ({
-            rank: index + 1,
-            username: user.username,
-            fullName: user.fullName,
-            score: Math.round(user.score * 0.3), // Weekly score is lower
-            isCurrentUser: false
-        })),
+        globalLeaderboard,
+        weeklyLeaderboard,
         userRank: {
-            rank: 15,
-            score: 1450
-        }
+            rank: userRank + 1,
+            score: currentUser?.totalScore ?? 0,
+        },
     }
 }
 

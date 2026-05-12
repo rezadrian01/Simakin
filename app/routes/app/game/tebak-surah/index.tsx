@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLoaderData, useNavigate } from "react-router";
+import { useLoaderData, useNavigate, useFetcher } from "react-router";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -10,6 +10,7 @@ import type { Route } from "./+types/index";
 import { requireUserId } from "~/services/auth/auth.server";
 import { generateQuestions } from "~/services/game/game.server";
 import { logXPGain } from "~/services/xp-history/xp-history.server";
+import { updateUserStreak } from "~/services/streak/streak.server";
 import { incrementChallengeProgress } from "~/services/daily-challenge/daily-challenge.server";
 import { checkAndAwardAchievements } from "~/services/achievement/achievement.server";
 import { db } from "~/lib/db.server";
@@ -69,8 +70,9 @@ export async function action({ request }: Route.ActionArgs) {
     },
   });
 
-  // Log XP
+  // Log XP and update streak
   await logXPGain(userId, expEarned, "MINIGAME", gameSession.id);
+  await updateUserStreak(userId);
 
   // Increment WIN_GAMES daily challenge if won
   if (isWin) {
@@ -92,19 +94,20 @@ export async function action({ request }: Route.ActionArgs) {
     select: { totalScore: true },
   });
 
-  const newAchievements = await checkAndAwardAchievements(userId, {
+  await checkAndAwardAchievements(userId, {
     totalGameSessions,
     totalGameWins,
     totalScore: updatedUser?.totalScore ?? 0,
     lastGameCorrect: correctAnswers,
   });
 
-  return { correctAnswers, expEarned, isWin, gameSessionId: gameSession.id, newAchievements };
+  return { correctAnswers, expEarned, isWin };
 }
 
 export default function TebakSurahPage() {
   const { questions } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const fetcher = useFetcher<typeof action>();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -114,37 +117,41 @@ export default function TebakSurahPage() {
     new Array(questions.length).fill(null)
   );
   const [showResult, setShowResult] = useState(false);
-  const [resultData, setResultData] = useState<{
-    correctAnswers: number;
-    expEarned: number;
-    isWin: boolean;
-  } | null>(null);
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      setShowResult(true);
+    }
+  }, [fetcher.state, fetcher.data]);
 
   const currentQuestion = questions[currentIndex];
-  const isFinished = showResult || currentIndex >= questions.length;
 
-  // Timer
+  // Timer — auto-advance on timeout
   useEffect(() => {
     if (isAnswered || showResult || currentIndex >= questions.length) return;
     if (timer <= 0) {
-      handleTimeUp();
+      const newAnswers = [...answers];
+      newAnswers[currentIndex] = -1;
+      setAnswers(newAnswers);
+      setIsAnswered(true);
+      setTimeout(() => {
+        if (currentIndex < questions.length - 1) {
+          setCurrentIndex((i) => i + 1);
+          setSelectedAnswer(null);
+          setIsAnswered(false);
+          setTimer(TIME_PER_QUESTION);
+        } else {
+          submitAnswers(newAnswers);
+        }
+      }, 800);
       return;
     }
     const interval = setInterval(() => {
       setTimer((t) => t - 1);
     }, 1000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer, isAnswered, showResult, currentIndex]);
-
-  const handleTimeUp = useCallback(() => {
-    if (!isAnswered) {
-      const newAnswers = [...answers];
-      newAnswers[currentIndex] = -1; // -1 means timeout
-      setAnswers(newAnswers);
-      setIsAnswered(true);
-      setTimer(TIME_PER_QUESTION);
-    }
-  }, [isAnswered, currentIndex, answers]);
 
   const handleSelect = async (optionIndex: number) => {
     if (isAnswered) return;
@@ -169,34 +176,21 @@ export default function TebakSurahPage() {
     }
   };
 
-  const submitAnswers = async (finalAnswers: (number | null)[]) => {
-    const timeTaken = (QUESTIONS_PER_ROUND - currentIndex) * TIME_PER_QUESTION;
+  const submitAnswers = (finalAnswers: (number | null)[]) => {
     const formData = new FormData();
     formData.set("answers", JSON.stringify(finalAnswers));
     formData.set("questions", JSON.stringify(questions));
-    formData.set("timeTaken", timeTaken.toString());
-
-    try {
-      const res = await fetch(`/app/game/tebak-surah`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      setResultData(data);
-      setShowResult(true);
-    } catch (e) {
-      console.error(e);
-    }
+    fetcher.submit(formData, { method: "POST" });
   };
 
-  if (showResult && resultData) {
+  if (showResult && fetcher.data) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <RoundResult
-          correctAnswers={resultData.correctAnswers}
+          correctAnswers={fetcher.data.correctAnswers}
           totalQuestions={QUESTIONS_PER_ROUND}
-          expEarned={resultData.expEarned}
-          isWin={resultData.isWin}
+          expEarned={fetcher.data.expEarned}
+          isWin={fetcher.data.isWin}
           gameType="tebak-surah"
         />
       </div>
@@ -212,7 +206,7 @@ export default function TebakSurahPage() {
         </Button>
         <div>
           <h1 className="text-xl font-bold">Tebak Surah</h1>
-          <p className="text-sm text-muted-foreground">Tebak surah dari ayat yang shown</p>
+          <p className="text-sm text-muted-foreground">Tebak surah dari ayat yang ditampilkan</p>
         </div>
       </div>
 
@@ -225,7 +219,7 @@ export default function TebakSurahPage() {
           >
             {/* The 2 ayahs */}
             <div className="space-y-3 mb-6">
-              {currentQuestion.ayahs.map((ayah, i) => (
+              {currentQuestion.ayahs.map((ayah: string, i: number) => (
                 <p
                   key={i}
                   className="text-2xl font-serif text-right leading-relaxed text-foreground"
@@ -243,7 +237,7 @@ export default function TebakSurahPage() {
 
             {/* Options */}
             <div className="grid grid-cols-1 gap-3">
-              {currentQuestion.options.map((option, idx) => {
+              {currentQuestion.options.map((option: string, idx: number) => {
                 let state: "idle" | "correct" | "wrong" | "selected" = "idle";
                 if (isAnswered) {
                   if (idx === currentQuestion.correctIndex) state = "correct";

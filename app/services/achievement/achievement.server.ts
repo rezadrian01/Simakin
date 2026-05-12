@@ -37,15 +37,15 @@ export async function checkAndAwardAchievements(
 
     switch (achievement.key) {
       case "first_recitation":
-        awarded = context.totalSessions === 1;
+        awarded = (context.totalSessions ?? 0) >= 1;
         break;
 
       case "recitation_10":
-        awarded = context.totalSessions === 10;
+        awarded = (context.totalSessions ?? 0) >= 10;
         break;
 
       case "recitation_50":
-        awarded = context.totalSessions === 50;
+        awarded = (context.totalSessions ?? 0) >= 50;
         break;
 
       case "perfect_accuracy":
@@ -77,11 +77,15 @@ export async function checkAndAwardAchievements(
         break;
 
       case "first_game":
-        awarded = context.totalGameSessions === 1;
+        awarded = (context.totalGameSessions ?? 0) >= 1;
+        break;
+
+      case "perfect_game":
+        awarded = (context.lastGameCorrect ?? 0) === 10;
         break;
 
       case "game_win_10":
-        awarded = context.totalGameWins === 10;
+        awarded = (context.totalGameWins ?? 0) >= 10;
         break;
 
       case "exp_1000":

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { Gamepad2, Target, Puzzle, Brain, Zap, Star } from 'lucide-react'
+import { Gamepad2, Target, Puzzle, Brain, Zap, Star, CheckCircle2, Circle, BookOpen, Trophy } from 'lucide-react'
 import { Link, useLoaderData } from 'react-router'
 import type { Route } from './+types/index'
 import { requireUserId } from '~/services/auth/auth.server'
@@ -91,6 +91,17 @@ export default function GamePage() {
         }
     }
 
+    const getChallengeIcon = (type: string) => {
+        switch (type) {
+            case 'WIN_GAMES': return Trophy
+            case 'PLAY_GAMES': return Gamepad2
+            case 'REACH_ACCURACY': return Target
+            default: return BookOpen
+        }
+    }
+
+    const completedCount = data.challenges.filter(c => c.isCompleted).length
+
     return (
         <div className="container mx-auto px-6 py-8 max-w-7xl">
             {/* Header */}
@@ -171,30 +182,70 @@ export default function GamePage() {
             {/* Daily Challenge */}
             <Card className="border-2 border-simakin-primary">
                 <CardHeader>
-                    <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                        <Zap className="w-6 h-6 text-simakin-primary" />
-                        Tantangan Harian
-                    </CardTitle>
-                    <CardDescription>Selesaikan tantangan untuk bonus EXP!</CardDescription>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                                <Zap className="w-6 h-6 text-simakin-primary" />
+                                Tantangan Harian
+                            </CardTitle>
+                            <CardDescription className="mt-1">
+                                Selesaikan tantangan hari ini untuk mendapatkan bonus EXP. Tantangan direset setiap hari.
+                            </CardDescription>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                            <p className="text-2xl font-bold text-foreground">{completedCount}/{data.challenges.length}</p>
+                            <p className="text-xs text-muted-foreground">selesai</p>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {data.challenges.map((challenge) => (
-                            <div key={challenge.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                                <div>
-                                    <h3 className="font-semibold text-foreground text-sm mb-1">
-                                        {challenge.description}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                        Progress: {challenge.currentProgress}/{challenge.targetValue}{' '}
-                                        {challenge.isCompleted && <span className="text-green-600 font-medium">✓ Selesai</span>}
-                                    </p>
+                    <div className="space-y-4">
+                        {data.challenges.map((challenge) => {
+                            const Icon = getChallengeIcon(challenge.type)
+                            const pct = Math.min(100, Math.round((challenge.currentProgress / challenge.targetValue) * 100))
+                            return (
+                                <div
+                                    key={challenge.id}
+                                    className={`p-4 rounded-lg border transition-colors ${
+                                        challenge.isCompleted
+                                            ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                                            : 'bg-muted/30 border-border'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                                            challenge.isCompleted ? 'bg-green-100 dark:bg-green-900/40' : 'bg-muted'
+                                        }`}>
+                                            <Icon className={`w-5 h-5 ${challenge.isCompleted ? 'text-green-600' : 'text-muted-foreground'}`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <h3 className="font-semibold text-foreground text-sm">{challenge.description}</h3>
+                                                {challenge.isCompleted
+                                                    ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                                    : <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                }
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {challenge.currentProgress} / {challenge.targetValue}
+                                                {challenge.isCompleted && <span className="ml-1 text-green-600 font-medium">· Selesai!</span>}
+                                            </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className={`text-sm font-bold ${challenge.isCompleted ? 'text-green-600' : 'text-simakin-primary'}`}>
+                                                +{challenge.expReward} EXP
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all ${challenge.isCompleted ? 'bg-green-500' : 'bg-simakin-primary'}`}
+                                            style={{ width: `${pct}%` }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-bold text-simakin-primary">+{challenge.expReward} EXP</p>
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 </CardContent>
             </Card>

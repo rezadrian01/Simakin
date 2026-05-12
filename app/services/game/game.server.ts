@@ -257,5 +257,5 @@ export async function generateQuestions(gameType: string, count = 10) {
   const gen = generators[gameType];
   if (!gen) throw new Error(`Unknown game type: ${gameType}`);
 
-  return Array.from({ length: count }, () => gen());
+  return Promise.all(Array.from({ length: count }, () => gen()));
 }

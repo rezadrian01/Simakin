@@ -95,7 +95,8 @@ export async function incrementChallengeProgress(
     return { justCompleted: false, expAwarded: 0 };
   }
 
-  const progress = await db.userDailyChallenge.findUnique({
+  // Upsert: create today's record if it doesn't exist yet
+  const progress = await db.userDailyChallenge.upsert({
     where: {
       userId_challengeId_date: {
         userId,
@@ -103,12 +104,15 @@ export async function incrementChallengeProgress(
         date: today,
       },
     },
+    update: {},
+    create: {
+      userId,
+      challengeId: challenge.id,
+      date: today,
+      currentProgress: 0,
+      isCompleted: false,
+    },
   });
-
-  if (!progress) {
-    // Shouldn't happen but handle gracefully
-    return { justCompleted: false, expAwarded: 0 };
-  }
 
   if (progress.isCompleted) {
     // Already completed — no double reward
